@@ -13,19 +13,8 @@ import '../theme/app_colors.dart';
 import 'invite_screen.dart';
 import '../widgets/fade_in_widget.dart';
 
-class _HomePalette {
-  static const background = Color(0xFFF2EFF7);
-  static const surface = Color(0xEFFFFFFF);
-  static const surfaceAlt = Color(0xFFF7F5FA);
-  static const accent = Color(0xFF8064C8);
-  static const accentSoft = Color(0xFFB6A4E5);
-  static const textPrimary = Color(0xFF292536);
-  static const textSecondary = Color(0xFF827C91);
-  static const border = Color(0xFFE8E2F0);
-  static const danger = Color(0xFFD95D70);
-  static const success = Color(0xFF279B70);
-  static const warning = Color(0xFFE5A13B);
-}
+AppPalette _homePalette(BuildContext context) =>
+    Theme.of(context).extension<AppPalette>() ?? AppPalette.light;
 
 class HomeDashboard extends StatefulWidget {
   final VoidCallback onConnectPressed;
@@ -162,15 +151,18 @@ class _HomeDashboardState extends State<HomeDashboard>
   @override
   Widget build(BuildContext context) {
     final isBusy = widget.isConnecting;
+    final palette =
+        Theme.of(context).extension<AppPalette>() ?? AppPalette.light;
+
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFFF5F2FA),
-            Color(0xFFF0EDF6),
-            Color(0xFFF7F5FA),
+            palette.background,
+            palette.surfaceAlt,
+            palette.background,
           ],
         ),
       ),
@@ -219,8 +211,8 @@ class _HomeDashboardState extends State<HomeDashboard>
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: _HomePalette.textPrimary,
+            style: TextStyle(
+              color: _homePalette(context).textPrimary,
               fontSize: 28,
               fontWeight: FontWeight.w600,
             ),
@@ -237,7 +229,7 @@ class _HomeDashboardState extends State<HomeDashboard>
 
   Widget _circleButton(IconData icon, VoidCallback? onTap) {
     return Material(
-      color: _HomePalette.surface,
+      color: _homePalette(context).surface,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -245,7 +237,7 @@ class _HomeDashboardState extends State<HomeDashboard>
         child: SizedBox(
           width: 48,
           height: 48,
-          child: Icon(icon, color: _HomePalette.textPrimary, size: 24),
+          child: Icon(icon, color: _homePalette(context).textPrimary, size: 24),
         ),
       ),
     );
@@ -258,12 +250,14 @@ class _HomeDashboardState extends State<HomeDashboard>
     final double avail =
         total > 0 ? (1 - used / total).clamp(0.0, 1.0).toDouble() : 0.0;
     final pct = (avail * 100).round();
-    final color = avail < 0.1 ? _HomePalette.danger : _HomePalette.accent;
+    final color = avail < 0.1
+        ? _homePalette(context).danger
+        : _homePalette(context).accent;
     return Container(
       height: 56,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: _HomePalette.surface,
+        color: _homePalette(context).surface,
         borderRadius: BorderRadius.circular(28),
       ),
       child: Stack(
@@ -298,9 +292,10 @@ class _HomeDashboardState extends State<HomeDashboard>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '已用流量',
-          style: TextStyle(color: _HomePalette.textSecondary, fontSize: 15),
+          style: TextStyle(
+              color: _homePalette(context).textSecondary, fontSize: 15),
         ),
         const SizedBox(height: 6),
         Text.rich(
@@ -308,8 +303,8 @@ class _HomeDashboardState extends State<HomeDashboard>
             children: [
               TextSpan(
                 text: used.v,
-                style: const TextStyle(
-                  color: _HomePalette.textPrimary,
+                style: TextStyle(
+                  color: _homePalette(context).textPrimary,
                   fontSize: 44,
                   fontWeight: FontWeight.w600,
                   height: 1.1,
@@ -317,8 +312,8 @@ class _HomeDashboardState extends State<HomeDashboard>
               ),
               TextSpan(
                 text: ' ${used.u} / ${total.v} ${total.u}',
-                style: const TextStyle(
-                  color: _HomePalette.textSecondary,
+                style: TextStyle(
+                  color: _homePalette(context).textSecondary,
                   fontSize: 20,
                 ),
               ),
@@ -338,10 +333,10 @@ class _HomeDashboardState extends State<HomeDashboard>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 '有效期',
-                style:
-                    TextStyle(color: _HomePalette.textSecondary, fontSize: 15),
+                style: TextStyle(
+                    color: _homePalette(context).textSecondary, fontSize: 15),
               ),
               const SizedBox(height: 6),
               Text.rich(
@@ -349,8 +344,8 @@ class _HomeDashboardState extends State<HomeDashboard>
                   children: [
                     TextSpan(
                       text: d.v,
-                      style: const TextStyle(
-                        color: _HomePalette.textPrimary,
+                      style: TextStyle(
+                        color: _homePalette(context).textPrimary,
                         fontSize: 44,
                         fontWeight: FontWeight.w600,
                         height: 1.1,
@@ -358,8 +353,8 @@ class _HomeDashboardState extends State<HomeDashboard>
                     ),
                     TextSpan(
                       text: d.u.isEmpty ? '' : ' ${d.u}',
-                      style: const TextStyle(
-                        color: _HomePalette.textSecondary,
+                      style: TextStyle(
+                        color: _homePalette(context).textSecondary,
                         fontSize: 20,
                       ),
                     ),
@@ -373,8 +368,8 @@ class _HomeDashboardState extends State<HomeDashboard>
           OutlinedButton(
             onPressed: widget.onOpenPlans,
             style: OutlinedButton.styleFrom(
-              foregroundColor: _HomePalette.accent,
-              side: const BorderSide(color: _HomePalette.accent, width: 1.5),
+              foregroundColor: _homePalette(context).accent,
+              side: BorderSide(color: _homePalette(context).accent, width: 1.5),
               shape: const StadiumBorder(),
               minimumSize: const Size(0, 46),
               padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -392,7 +387,7 @@ class _HomeDashboardState extends State<HomeDashboard>
     final mode =
         V2rayService().routingMode == ProxyRoutingMode.global ? '全局模式' : '规则分流';
     return Material(
-      color: _HomePalette.surface,
+      color: _homePalette(context).surface,
       borderRadius: BorderRadius.circular(28),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -403,11 +398,11 @@ class _HomeDashboardState extends State<HomeDashboard>
             subtitle: widget.selectedNodeName ?? '点击选择节点',
             onTap: widget.onSelectNode,
           ),
-          const Divider(
+          Divider(
             height: 1,
             indent: 20,
             endIndent: 20,
-            color: _HomePalette.border,
+            color: _homePalette(context).border,
           ),
           _entryRow(
             icon: Icons.public_rounded,
@@ -432,7 +427,7 @@ class _HomeDashboardState extends State<HomeDashboard>
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
         child: Row(
           children: [
-            Icon(icon, color: _HomePalette.accent, size: 30),
+            Icon(icon, color: _homePalette(context).accent, size: 30),
             const SizedBox(width: 18),
             Expanded(
               child: Column(
@@ -440,8 +435,8 @@ class _HomeDashboardState extends State<HomeDashboard>
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: _HomePalette.textPrimary,
+                    style: TextStyle(
+                      color: _homePalette(context).textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
                     ),
@@ -451,17 +446,17 @@ class _HomeDashboardState extends State<HomeDashboard>
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: _HomePalette.textSecondary,
+                    style: TextStyle(
+                      color: _homePalette(context).textSecondary,
                       fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
-              color: _HomePalette.textSecondary,
+              color: _homePalette(context).textSecondary,
             ),
           ],
         ),
@@ -485,8 +480,9 @@ class _HomeDashboardState extends State<HomeDashboard>
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color:
-                      isBusy ? _HomePalette.accent : _HomePalette.textSecondary,
+                  color: isBusy
+                      ? _homePalette(context).accent
+                      : _homePalette(context).textSecondary,
                   fontSize: 13,
                 ),
               ),
@@ -497,11 +493,13 @@ class _HomeDashboardState extends State<HomeDashboard>
             child: FilledButton(
               onPressed: isBusy ? null : widget.onConnectPressed,
               style: FilledButton.styleFrom(
-                backgroundColor:
-                    connected ? _HomePalette.surfaceAlt : _HomePalette.accent,
-                disabledBackgroundColor: _HomePalette.accent.withValues(
-                  alpha: 0.5,
-                ),
+                backgroundColor: connected
+                    ? _homePalette(context).surfaceAlt
+                    : _homePalette(context).accent,
+                disabledBackgroundColor:
+                    _homePalette(context).accent.withValues(
+                          alpha: 0.5,
+                        ),
                 foregroundColor: Colors.white,
                 disabledForegroundColor: Colors.white70,
                 shape: const StadiumBorder(),
@@ -515,8 +513,8 @@ class _HomeDashboardState extends State<HomeDashboard>
                       width: 10,
                       height: 10,
                       margin: const EdgeInsets.only(right: 10),
-                      decoration: const BoxDecoration(
-                        color: _HomePalette.success,
+                      decoration: BoxDecoration(
+                        color: _homePalette(context).success,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -554,10 +552,10 @@ class _HomeDashboardState extends State<HomeDashboard>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: _HomePalette.surface.withOpacity(0.6),
+          color: _homePalette(context).surface.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: _HomePalette.accent.withOpacity(0.2),
+            color: _homePalette(context).accent.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -567,14 +565,14 @@ class _HomeDashboardState extends State<HomeDashboard>
             Icon(
               Icons.tune_rounded,
               size: 16,
-              color: _HomePalette.accent.withOpacity(0.8),
+              color: _homePalette(context).accent.withValues(alpha: 0.8),
             ),
             const SizedBox(width: 8),
             Text(
               l10n?.proxySettings ?? 'Proxy Mode',
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -582,7 +580,7 @@ class _HomeDashboardState extends State<HomeDashboard>
             Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 16,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
             ),
           ],
         ),
@@ -598,7 +596,7 @@ class _HomeDashboardState extends State<HomeDashboard>
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withOpacity(0.7),
+      barrierColor: Colors.black.withValues(alpha: 0.7),
       transitionDuration: const Duration(milliseconds: 280),
       pageBuilder: (context, animation, secondaryAnimation) => const SizedBox(),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -619,15 +617,17 @@ class _HomeDashboardState extends State<HomeDashboard>
                       width: 280,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: _HomePalette.surface,
+                        color: _homePalette(context).surface,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: _HomePalette.accent.withOpacity(0.12),
+                          color: _homePalette(context)
+                              .accent
+                              .withValues(alpha: 0.12),
                           width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withValues(alpha: 0.5),
                             blurRadius: 40,
                             offset: const Offset(0, 20),
                           ),
@@ -640,7 +640,7 @@ class _HomeDashboardState extends State<HomeDashboard>
                           Text(
                             l10n?.routingMode ?? 'Routing Mode',
                             style: TextStyle(
-                              color: _HomePalette.textPrimary,
+                              color: _homePalette(context).textPrimary,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.3,
@@ -691,15 +691,16 @@ class _HomeDashboardState extends State<HomeDashboard>
                                 vertical: 12,
                               ),
                               decoration: BoxDecoration(
-                                color: _HomePalette.background,
+                                color: _homePalette(context).background,
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: _HomePalette.border),
+                                border: Border.all(
+                                    color: _homePalette(context).border),
                               ),
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.router_rounded,
-                                    color: _HomePalette.textSecondary,
+                                    color: _homePalette(context).textSecondary,
                                     size: 20,
                                   ),
                                   const SizedBox(width: 12),
@@ -711,14 +712,16 @@ class _HomeDashboardState extends State<HomeDashboard>
                                         Text(
                                           l10n?.tunMode ?? 'TUN Mode',
                                           style: TextStyle(
-                                            color: _HomePalette.textPrimary,
+                                            color: _homePalette(context)
+                                                .textPrimary,
                                             fontSize: 14,
                                           ),
                                         ),
                                         Text(
                                           l10n?.tunModeDesc ?? 'Experimental',
                                           style: TextStyle(
-                                            color: _HomePalette.textSecondary,
+                                            color: _homePalette(context)
+                                                .textSecondary,
                                             fontSize: 11,
                                           ),
                                         ),
@@ -731,7 +734,8 @@ class _HomeDashboardState extends State<HomeDashboard>
                                           V2rayService().tunEnabled;
                                       return Switch(
                                         value: tunEnabled,
-                                        activeColor: _HomePalette.accent,
+                                        activeThumbColor:
+                                            _homePalette(context).accent,
                                         onChanged: (val) async {
                                           setTunState(() => tunEnabled = val);
                                           await V2rayService()
@@ -782,13 +786,13 @@ class _HomeDashboardState extends State<HomeDashboard>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
-              ? _HomePalette.accent.withOpacity(0.08)
-              : _HomePalette.background,
+              ? _homePalette(context).accent.withValues(alpha: 0.08)
+              : _homePalette(context).background,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
-                ? _HomePalette.accent.withOpacity(0.35)
-                : _HomePalette.border,
+                ? _homePalette(context).accent.withValues(alpha: 0.35)
+                : _homePalette(context).border,
             width: 1,
           ),
         ),
@@ -796,8 +800,9 @@ class _HomeDashboardState extends State<HomeDashboard>
           children: [
             Icon(
               icon,
-              color:
-                  isSelected ? _HomePalette.accent : _HomePalette.textSecondary,
+              color: isSelected
+                  ? _homePalette(context).accent
+                  : _homePalette(context).textSecondary,
               size: 20,
             ),
             const SizedBox(width: 12),
@@ -806,15 +811,16 @@ class _HomeDashboardState extends State<HomeDashboard>
                 title,
                 style: TextStyle(
                   color: isSelected
-                      ? _HomePalette.textPrimary
-                      : _HomePalette.textSecondary,
+                      ? _homePalette(context).textPrimary
+                      : _homePalette(context).textSecondary,
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_rounded, color: _HomePalette.accent, size: 18),
+              Icon(Icons.check_rounded,
+                  color: _homePalette(context).accent, size: 18),
           ],
         ),
       ),
@@ -835,13 +841,13 @@ class _HomeDashboardState extends State<HomeDashboard>
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? _HomePalette.accent.withOpacity(0.15)
-              : Colors.white.withOpacity(0.05),
+              ? _homePalette(context).accent.withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? _HomePalette.accent.withOpacity(0.5)
-                : Colors.white.withOpacity(0.1),
+                ? _homePalette(context).accent.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.1),
             width: 1.5,
           ),
         ),
@@ -851,15 +857,15 @@ class _HomeDashboardState extends State<HomeDashboard>
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? _HomePalette.accent.withOpacity(0.2)
-                    : Colors.white.withOpacity(0.05),
+                    ? _homePalette(context).accent.withValues(alpha: 0.2)
+                    : Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
                 color: isSelected
-                    ? _HomePalette.accent
-                    : Colors.white.withOpacity(0.6),
+                    ? _homePalette(context).accent
+                    : Colors.white.withValues(alpha: 0.6),
                 size: 22,
               ),
             ),
@@ -873,7 +879,7 @@ class _HomeDashboardState extends State<HomeDashboard>
                     style: TextStyle(
                       color: isSelected
                           ? Colors.white
-                          : Colors.white.withOpacity(0.9),
+                          : Colors.white.withValues(alpha: 0.9),
                       fontSize: 15,
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.w500,
@@ -883,7 +889,7 @@ class _HomeDashboardState extends State<HomeDashboard>
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                       fontSize: 12,
                     ),
                   ),
@@ -893,7 +899,7 @@ class _HomeDashboardState extends State<HomeDashboard>
             if (isSelected)
               Icon(
                 Icons.check_circle_rounded,
-                color: _HomePalette.accent,
+                color: _homePalette(context).accent,
                 size: 24,
               ),
           ],
@@ -958,13 +964,14 @@ class _HomeDashboardState extends State<HomeDashboard>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: _HomePalette.surface.withOpacity(0.4),
+        color: _homePalette(context).surface.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(16),
-        border:
-            Border.all(color: _HomePalette.accent.withOpacity(0.15), width: 1),
+        border: Border.all(
+            color: _homePalette(context).accent.withValues(alpha: 0.15),
+            width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -975,10 +982,10 @@ class _HomeDashboardState extends State<HomeDashboard>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _HomePalette.accent.withOpacity(0.1),
+              color: _homePalette(context).accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 18, color: _HomePalette.accent),
+            child: Icon(icon, size: 18, color: _homePalette(context).accent),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1000,7 +1007,7 @@ class _HomeDashboardState extends State<HomeDashboard>
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     fontSize: 10,
                   ),
                   maxLines: 1,
@@ -1040,12 +1047,12 @@ class _HomeDashboardState extends State<HomeDashboard>
               end: Alignment.bottomRight,
             ),
             border: Border.all(
-              color: _HomePalette.accent.withValues(alpha: 0.55),
+              color: _homePalette(context).accent.withValues(alpha: 0.55),
               width: 1.1,
             ),
             boxShadow: [
               BoxShadow(
-                color: _HomePalette.accent.withValues(alpha: 0.42),
+                color: _homePalette(context).accent.withValues(alpha: 0.42),
                 blurRadius: 34,
                 offset: const Offset(0, 14),
               ),
@@ -1087,7 +1094,9 @@ class _HomeDashboardState extends State<HomeDashboard>
                         borderRadius: BorderRadius.circular(26),
                         gradient: RadialGradient(
                           colors: [
-                            _HomePalette.accent.withValues(alpha: glow),
+                            _homePalette(context)
+                                .accent
+                                .withValues(alpha: glow),
                             Colors.transparent,
                           ],
                           radius: 0.9,
@@ -1124,19 +1133,29 @@ class _HomeDashboardState extends State<HomeDashboard>
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: widget.isConnected
-                          ? [const Color(0xFF6CFFB8), _HomePalette.accent]
+                          ? [
+                              const Color(0xFF6CFFB8),
+                              _homePalette(context).accent
+                            ]
                           : (isBusy
                               ? [
                                   const Color(0xFFFFE18D),
                                   const Color(0xFFFFB347),
                                 ]
-                              : [_HomePalette.accent, const Color(0xFF6F7A8C)]),
+                              : [
+                                  _homePalette(context).accent,
+                                  const Color(0xFF6F7A8C)
+                                ]),
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: widget.isConnected
-                            ? _HomePalette.accent.withValues(alpha: 0.5)
-                            : _HomePalette.accent.withValues(alpha: 0.25),
+                            ? _homePalette(context)
+                                .accent
+                                .withValues(alpha: 0.5)
+                            : _homePalette(context)
+                                .accent
+                                .withValues(alpha: 0.25),
                         blurRadius: 8,
                         spreadRadius: 1,
                       ),
@@ -1188,15 +1207,15 @@ class _HomeDashboardState extends State<HomeDashboard>
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              _HomePalette.accent.withValues(alpha: 0.2),
-              _HomePalette.accent.withValues(alpha: 0.05),
+              _homePalette(context).accent.withValues(alpha: 0.2),
+              _homePalette(context).accent.withValues(alpha: 0.05),
             ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _HomePalette.accent.withValues(alpha: 0.2),
+            color: _homePalette(context).accent.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -1205,12 +1224,12 @@ class _HomeDashboardState extends State<HomeDashboard>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _HomePalette.accent.withValues(alpha: 0.2),
+                color: _homePalette(context).accent.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.card_giftcard,
-                color: _HomePalette.accent,
+                color: _homePalette(context).accent,
                 size: 20,
               ),
             ),
@@ -1251,7 +1270,7 @@ class _HomeDashboardState extends State<HomeDashboard>
       context: context,
       barrierDismissible: false,
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       transitionDuration: const Duration(milliseconds: 500),
       pageBuilder: (context, animation, secondaryAnimation) {
         return const SizedBox(); // 这里的 builder 不重要，主要看 transitionBuilder
@@ -1296,7 +1315,7 @@ class LogNoticeDialog extends StatelessWidget {
     final bodyStyle = TextStyle(
       fontSize: 15,
       height: 1.65,
-      color: _HomePalette.textPrimary.withValues(alpha: 0.88),
+      color: _homePalette(context).textPrimary.withValues(alpha: 0.88),
     );
     return Center(
       child: Material(
@@ -1305,7 +1324,7 @@ class LogNoticeDialog extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: 400, maxHeight: maxH),
           margin: const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
-            color: _HomePalette.surface,
+            color: _homePalette(context).surface,
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
@@ -1322,9 +1341,9 @@ class LogNoticeDialog extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.notifications_active_rounded,
-                      color: _HomePalette.accent,
+                      color: _homePalette(context).accent,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -1332,10 +1351,10 @@ class LogNoticeDialog extends StatelessWidget {
                         notice.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 19,
                           fontWeight: FontWeight.w700,
-                          color: _HomePalette.textPrimary,
+                          color: _homePalette(context).textPrimary,
                         ),
                       ),
                     ),
@@ -1380,16 +1399,17 @@ class LogNoticeDialog extends StatelessWidget {
                           ),
                           strong: bodyStyle.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: _homePalette(context).textPrimary,
                           ),
-                          a: bodyStyle.copyWith(color: _HomePalette.accent),
+                          a: bodyStyle.copyWith(
+                              color: _homePalette(context).accent),
                           listBullet: bodyStyle,
                           blockquote: bodyStyle.copyWith(
-                            color: _HomePalette.textSecondary,
+                            color: _homePalette(context).textSecondary,
                           ),
                           code: bodyStyle.copyWith(
                             fontFamily: 'monospace',
-                            backgroundColor: _HomePalette.surfaceAlt,
+                            backgroundColor: _homePalette(context).surfaceAlt,
                           ),
                         ),
                       ),
@@ -1405,8 +1425,8 @@ class LogNoticeDialog extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: () => _dismissForever(context),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: _HomePalette.textSecondary,
-                          side: const BorderSide(color: _HomePalette.border),
+                          foregroundColor: _homePalette(context).textSecondary,
+                          side: BorderSide(color: _homePalette(context).border),
                           shape: const StadiumBorder(),
                           minimumSize: const Size.fromHeight(50),
                         ),
@@ -1418,7 +1438,7 @@ class LogNoticeDialog extends StatelessWidget {
                       child: FilledButton(
                         onPressed: () => Navigator.pop(context),
                         style: FilledButton.styleFrom(
-                          backgroundColor: _HomePalette.accent,
+                          backgroundColor: _homePalette(context).accent,
                           foregroundColor: Colors.white,
                           shape: const StadiumBorder(),
                           minimumSize: const Size.fromHeight(50),
