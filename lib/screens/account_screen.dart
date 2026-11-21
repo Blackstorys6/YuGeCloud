@@ -14,6 +14,7 @@ import '../widgets/animated_card.dart';
 import '../widgets/staggered_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/flux_loader.dart';
+import 'appearance_screen.dart';
 import 'invite_screen.dart';
 import 'my_orders_screen.dart';
 import 'privacy_screen.dart';
@@ -421,6 +422,18 @@ class _AccountScreenState extends State<AccountScreen> {
                     Icons.lock_outline_rounded,
                     '修改账号密码',
                     _showChangePasswordDialog,
+                  ),
+                  const Divider(height: 24, color: AppColors.border),
+                  _buildLinkRow(
+                    context,
+                    Icons.palette_outlined,
+                    '外观设置',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AppearanceScreen(),
+                      ),
+                    ),
                   ),
                   const Divider(height: 24, color: AppColors.border),
                   _buildLinkRow(

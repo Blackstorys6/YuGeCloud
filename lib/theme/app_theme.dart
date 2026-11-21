@@ -169,4 +169,82 @@ class AppTheme {
       ),
     );
   }
+
+  static ThemeData dark() {
+    const background = Color(0xFF15131D);
+    const surface = Color(0xFF211E2B);
+    const border = Color(0xFF353044);
+    const primary = Color(0xFFB39BEA);
+    const textPrimary = Color(0xFFF1EDF8);
+    const textSecondary = Color(0xFFA39AAF);
+
+    final base = ThemeData.dark(useMaterial3: true);
+
+    return base.copyWith(
+      scaffoldBackgroundColor: background,
+      colorScheme: base.colorScheme.copyWith(
+        brightness: Brightness.dark,
+        primary: primary,
+        onPrimary: const Color(0xFF211A32),
+        secondary: const Color(0xFFC0A9F0),
+        surface: surface,
+        onSurface: textPrimary,
+        error: const Color(0xFFFF8295),
+      ),
+      textTheme: GoogleFonts.dmSansTextTheme(base.textTheme).apply(
+        bodyColor: textSecondary,
+        displayColor: textPrimary,
+      ),
+      dividerColor: border,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: background,
+        foregroundColor: textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
+      cardTheme: CardThemeData(
+        color: surface,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: border),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surface,
+        hintStyle: const TextStyle(color: textSecondary),
+        labelStyle: const TextStyle(color: textSecondary),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: primary, width: 1.5),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: border),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: surface,
+        contentTextStyle: const TextStyle(color: textPrimary),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+      ),
+    );
+  }
 }

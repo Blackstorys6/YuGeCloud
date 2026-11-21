@@ -17,6 +17,7 @@ import 'services/user_data_service.dart';
 import 'services/v2board_api.dart';
 import 'services/v2ray_service.dart';
 import 'theme/app_theme.dart';
+import 'theme/app_theme_controller.dart';
 import 'utils/asset_utils.dart';
 import 'widgets/flux_splash.dart';
 
@@ -93,6 +94,8 @@ void main() async {
     });
   }
 
+  await AppThemeController.instance.load();
+
   runApp(const FluxApp());
 }
 
@@ -150,19 +153,25 @@ class FluxApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '屿哥云',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      // 多语言配置
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: const AuthGate(),
+    return AnimatedBuilder(
+      animation: AppThemeController.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          title: '屿哥云',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: AppThemeController.instance.themeMode,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const AuthGate(),
+        );
+      },
     );
   }
 }
