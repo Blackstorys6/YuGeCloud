@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-
 import 'dart:ui';
+
+import 'package:flutter/material.dart';
+
+import '../theme/app_colors.dart';
 
 class GradientCard extends StatelessWidget {
   final Widget child;
@@ -17,23 +18,25 @@ class GradientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.6),
+            color: palette.surface.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
-              color: AppColors.border.withValues(alpha: 0.5),
-              width: 1.0,
+              color: palette.border.withValues(alpha: 0.85),
+              width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: palette.shadow.withValues(alpha: 0.65),
+                blurRadius: 18,
+                offset: const Offset(0, 7),
               ),
             ],
           ),
@@ -42,7 +45,7 @@ class GradientCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(borderRadius),
               gradient: LinearGradient(
                 colors: [
-                  Colors.white.withValues(alpha: 0.05),
+                  palette.glassOverlay.withValues(alpha: 0.42),
                   Colors.transparent,
                 ],
                 begin: Alignment.topLeft,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import 'flux_loader.dart';
 
@@ -18,56 +19,68 @@ class GlowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
+
     return AnimatedOpacity(
-      opacity: onPressed == null ? 0.5 : 1,
+      opacity: onPressed == null ? 0.55 : 1,
       duration: const Duration(milliseconds: 250),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
-            colors: [AppColors.accent, AppColors.accentSoft],
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              palette.accent,
+              palette.accentSoft,
+            ],
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.accent.withValues(alpha: 0.35),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
+              color: palette.accent.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
+            minimumSize: const Size(0, 50),
             backgroundColor: Colors.transparent,
+            foregroundColor: palette.surface,
             shadowColor: Colors.transparent,
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 22,
+              vertical: 13,
+            ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
           onPressed: onPressed,
           child: isLoading
               ? SizedBox(
-                  height: 24,
-                  width: 24,
+                  height: 22,
+                  width: 22,
                   child: FluxLoader(
-                    size: 24, 
-                    color: AppColors.surface,
+                    size: 22,
+                    color: palette.surface,
                   ),
                 )
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, size: 18, color: AppColors.surface),
-                      const SizedBox(width: 8),
+                      Icon(icon, size: 18, color: palette.surface),
+                      const SizedBox(width: 9),
                     ],
                     Text(
                       label,
-                      style: const TextStyle(
-                        color: AppColors.surface,
+                      style: TextStyle(
+                        color: palette.surface,
                         fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        letterSpacing: 0.5,
+                        fontSize: 15,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ],

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import 'flux_loader.dart';
 
-/// 操作按钮组件
 class ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -19,38 +19,46 @@ class ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
+    final enabled = onPressed != null;
+    final foreground = enabled
+        ? palette.accent
+        : palette.textSecondary.withValues(alpha: 0.55);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(15),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 12,
+          ),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: onPressed != null
-                  ? [
-                      Colors.white.withValues(alpha: 0.15),
-                      Colors.white.withValues(alpha: 0.08),
-                    ]
-                  : [
-                      Colors.white.withValues(alpha: 0.05),
-                      Colors.white.withValues(alpha: 0.02),
-                    ],
+              colors: [
+                palette.surfaceAlt.withValues(
+                  alpha: enabled ? 0.95 : 0.55,
+                ),
+                palette.surface.withValues(
+                  alpha: enabled ? 0.9 : 0.6,
+                ),
+              ],
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(15),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
-              width: 1,
+              color: (enabled ? palette.accent : palette.border)
+                  .withValues(alpha: enabled ? 0.24 : 0.55),
             ),
-            boxShadow: onPressed != null
+            boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: palette.shadow.withValues(alpha: 0.45),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ]
                 : null,
@@ -59,28 +67,24 @@ class ActionButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (isLoading)
-                const SizedBox(
+                SizedBox(
                   width: 16,
                   height: 16,
-                  child: FluxLoader(size: 20, color: Colors.white),
+                  child: FluxLoader(size: 20, color: foreground),
                 )
               else
                 Icon(
                   icon,
                   size: 18,
-                  color: onPressed != null
-                      ? Colors.white.withValues(alpha: 0.87)
-                      : Colors.white38,
+                  color: foreground,
                 ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: onPressed != null
-                      ? Colors.white.withValues(alpha: 0.87)
-                      : Colors.white38,
+                  color: foreground,
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -90,4 +94,3 @@ class ActionButton extends StatelessWidget {
     );
   }
 }
-

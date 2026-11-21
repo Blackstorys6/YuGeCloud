@@ -8,7 +8,7 @@ class AppThemeController extends ChangeNotifier {
 
   static const String _storageKey = 'yugecloud_theme_mode';
 
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode _themeMode = ThemeMode.dark;
 
   ThemeMode get themeMode => _themeMode;
 
@@ -22,8 +22,11 @@ class AppThemeController extends ChangeNotifier {
       case 'system':
         _themeMode = ThemeMode.system;
         break;
-      default:
+      case 'light':
         _themeMode = ThemeMode.light;
+        break;
+      default:
+        _themeMode = ThemeMode.dark;
     }
   }
 

@@ -261,12 +261,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           AppLocalizations.of(context)?.unpaidOrder ?? 'Unpaid Order',
-          style: const TextStyle(color: Colors.white, fontSize: 18),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
         ),
         content: Text(
           AppLocalizations.of(context)?.unpaidOrderMessage ??
               'You have an unpaid order. Please continue to pay or cancel.',
-          style: TextStyle(color: Colors.white.withOpacity(0.8)),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -281,7 +281,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             child: Text(
               AppLocalizations.of(context)?.continuePayment ??
                   'Continue Payment',
-              style: const TextStyle(color: AppColors.accent),
+              style: TextStyle(color: AppColors.accent),
             ),
           ),
         ],
@@ -459,6 +459,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     final methodsFuture = _methodsFuture ??= _loadMethods().then((methods) {
       if (mounted) {}
       return methods;
@@ -468,7 +469,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         title: Text(AppLocalizations.of(context)?.payment ?? 'Payment'),
       ),
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: AppColors.heroGlow),
+        decoration: BoxDecoration(color: AppColors.background),
         child: FutureBuilder<List<PaymentMethod>>(
           future: methodsFuture,
           builder: (context, snapshot) {
@@ -484,7 +485,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   children: [
                     Text(
                       message,
-                      style: const TextStyle(color: AppColors.accentWarm),
+                      style: TextStyle(color: AppColors.danger),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
@@ -522,7 +523,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     return GradientCard(
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.account_balance_wallet_outlined,
                             color: AppColors.accent,
                           ),
@@ -531,7 +532,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   '账户余额',
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
@@ -567,14 +568,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   GradientCard(
                     child: Row(
                       children: [
-                        const Icon(Icons.layers, color: AppColors.accent),
+                        Icon(Icons.layers, color: AppColors.accent),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             AppLocalizations.of(context)?.selectPlanPrompt ??
                                 'Select a plan first',
-                            style:
-                                const TextStyle(color: AppColors.textPrimary),
+                            style: TextStyle(color: AppColors.textPrimary),
                           ),
                         ),
                         TextButton(
@@ -664,7 +664,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           '订单已创建',
                           style: TextStyle(
                             color: AppColors.textPrimary,
@@ -674,7 +674,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         const SizedBox(height: 8),
                         SelectableText(
                           '订单号：$_lastCreatedTradeNo',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
                           ),
@@ -683,7 +683,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               '订单应付金额',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
@@ -693,7 +693,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               _lastCreatedAmount == null
                                   ? '暂时无法获取'
                                   : '¥${Formatters.formatCurrency(_lastCreatedAmount!)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.accent,
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -702,7 +702,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        const Text(
+                        Text(
                           '金额以服务器订单详情为准；可在「我的订单」中查看和继续支付。',
                           style: TextStyle(
                             color: AppColors.textSecondary,
@@ -753,8 +753,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       AppLocalizations.of(context)?.noPaymentMethods ??
                           'No payment methods available',
                       style: TextStyle(
-                          color: AppColors.textPrimary.withOpacity(0.5),
-                          fontSize: 13),
+                          color: AppColors.textSecondary, fontSize: 13),
                     ),
                   ),
                 ],
@@ -763,7 +762,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   Center(
                     child: Text(
                       _message!,
-                      style: const TextStyle(color: AppColors.accentWarm),
+                      style: TextStyle(color: AppColors.danger),
                       textAlign: TextAlign.center,
                     ),
                   ),

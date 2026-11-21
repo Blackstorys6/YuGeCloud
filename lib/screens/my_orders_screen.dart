@@ -44,19 +44,20 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     }
   }
 
-  Color _statusColor(dynamic value) {
+  Color _statusColor(BuildContext context, dynamic value) {
+    final palette = context.appPalette;
     switch (_number(value)) {
       case 0:
-        return AppColors.accentWarm;
+        return palette.warning;
       case 1:
-        return AppColors.accent;
+        return palette.accent;
       case 2:
-        return Colors.grey;
+        return palette.textSecondary;
       case 3:
       case 4:
-        return Colors.green;
+        return palette.success;
       default:
-        return AppColors.textSecondary;
+        return palette.textSecondary;
     }
   }
 
@@ -108,6 +109,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   }
 
   Future<void> _showDetail(String tradeNo) async {
+    final palette = context.appPalette;
     try {
       final response = await _api.getOrderDetail(tradeNo);
       final data = response['data'];
@@ -124,32 +126,36 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          backgroundColor: AppColors.surface,
-          title: const Text('订单详情'),
+          backgroundColor: palette.surface,
+          title: Text('订单详情'),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _detailRow('订单号', tradeNo),
+                _detailRow(dialogContext, '订单号', tradeNo),
                 _detailRow(
+                    dialogContext,
                     '套餐',
                     order['plan'] is Map
                         ? (order['plan']['name']?.toString() ?? '—')
                         : '—'),
-                _detailRow('应付金额', _amount(order['total_amount'])),
-                _detailRow('余额抵扣', _amount(order['balance_amount'])),
-                _detailRow('优惠金额', _amount(order['discount_amount'])),
-                _detailRow('订单状态', _statusText(order['status'])),
-                _detailRow('创建时间', _date(order['created_at'])),
-                _detailRow('支付时间', _date(order['paid_at'])),
+                _detailRow(
+                    dialogContext, '应付金额', _amount(order['total_amount'])),
+                _detailRow(
+                    dialogContext, '余额抵扣', _amount(order['balance_amount'])),
+                _detailRow(
+                    dialogContext, '优惠金额', _amount(order['discount_amount'])),
+                _detailRow(dialogContext, '订单状态', _statusText(order['status'])),
+                _detailRow(dialogContext, '创建时间', _date(order['created_at'])),
+                _detailRow(dialogContext, '支付时间', _date(order['paid_at'])),
               ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('关闭'),
+              child: Text('关闭'),
             ),
           ],
         ),
@@ -159,7 +165,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     }
   }
 
-  Widget _detailRow(String label, String value) {
+  Widget _detailRow(BuildContext context, String label, String value) {
+    final palette = context.appPalette;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -169,7 +176,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
             width: 85,
             child: Text(
               label,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: palette.textSecondary),
             ),
           ),
           Expanded(child: SelectableText(value)),
@@ -186,20 +193,21 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   }
 
   Future<void> _cancelOrder(String tradeNo) async {
+    final palette = context.appPalette;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('取消订单'),
-        content: const Text('确定要取消这笔待支付订单吗？'),
+        backgroundColor: palette.surface,
+        title: Text('取消订单'),
+        content: Text('确定要取消这笔待支付订单吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('暂不取消'),
+            child: Text('暂不取消'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('确认取消'),
+            child: Text('确认取消'),
           ),
         ],
       ),
@@ -217,6 +225,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   }
 
   Future<void> _continuePayment(String tradeNo) async {
+    final palette = context.appPalette;
     try {
       final response = await _api.getPaymentMethods();
       final data = response['data'];
@@ -239,7 +248,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
       final selected = await showModalBottomSheet<PaymentMethod>(
         context: context,
-        backgroundColor: AppColors.surface,
+        backgroundColor: palette.surface,
         builder: (sheetContext) => SafeArea(
           child: ListView(
             shrinkWrap: true,
@@ -253,9 +262,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               ),
               ...methods.map(
                 (method) => ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.payment,
-                    color: AppColors.accent,
+                    color: palette.accent,
                   ),
                   title: Text(method.name),
                   onTap: () => Navigator.pop(sheetContext, method),
@@ -325,7 +334,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     }
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order) {
+  Widget _buildOrderCard(BuildContext context, Map<String, dynamic> order) {
+    final palette = context.appPalette;
     final tradeNo = order['trade_no']?.toString() ?? '';
     final status = order['status'];
     final plan = order['plan'];
@@ -333,11 +343,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         plan is Map ? (plan['name']?.toString() ?? '套餐订单') : '套餐订单';
 
     return Card(
-      color: AppColors.surface,
+      color: palette.surface,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: palette.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -349,7 +359,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 Expanded(
                   child: Text(
                     planName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -358,7 +368,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 Text(
                   _statusText(status),
                   style: TextStyle(
-                    color: _statusColor(status),
+                    color: _statusColor(context, status),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -367,29 +377,29 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
             const SizedBox(height: 12),
             Text(
               _amount(order['total_amount']),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.accent,
+                color: palette.accent,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               '订单号：$tradeNo',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textSecondary,
+                color: palette.textSecondary,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               '创建时间：${_date(order['created_at'])}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textSecondary,
+                color: palette.textSecondary,
               ),
             ),
-            const Divider(height: 24),
+            Divider(height: 24, color: palette.border),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -397,19 +407,19 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 OutlinedButton(
                   onPressed:
                       tradeNo.isEmpty ? null : () => _showDetail(tradeNo),
-                  child: const Text('订单详情'),
+                  child: Text('订单详情'),
                 ),
                 if (_number(status) == 0) ...[
                   FilledButton(
                     onPressed: tradeNo.isEmpty
                         ? null
                         : () => _continuePayment(tradeNo),
-                    child: const Text('继续支付'),
+                    child: Text('继续支付'),
                   ),
                   TextButton(
                     onPressed:
                         tradeNo.isEmpty ? null : () => _cancelOrder(tradeNo),
-                    child: const Text(
+                    child: Text(
                       '取消订单',
                       style: TextStyle(color: Colors.redAccent),
                     ),
@@ -431,19 +441,20 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的订单'),
+        title: Text('我的订单'),
         actions: [
           IconButton(
             tooltip: '刷新',
             onPressed: _loading ? null : _loadOrders,
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
           ),
         ],
       ),
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: AppColors.heroGlow),
+        decoration: BoxDecoration(color: palette.background),
         child: _loading
             ? const Center(child: FluxLoader(showTips: true))
             : _error != null
@@ -460,7 +471,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           const SizedBox(height: 12),
                           ElevatedButton(
                             onPressed: _loadOrders,
-                            child: const Text('重新加载'),
+                            child: Text('重新加载'),
                           ),
                         ],
                       ),
@@ -474,7 +485,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           padding: const EdgeInsets.all(16),
                           itemCount: _orders.length,
                           itemBuilder: (context, index) =>
-                              _buildOrderCard(_orders[index]),
+                              _buildOrderCard(context, _orders[index]),
                         ),
                       ),
       ),

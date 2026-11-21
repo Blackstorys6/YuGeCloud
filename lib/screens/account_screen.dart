@@ -98,6 +98,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     // 重试时优先显示 loading，不管 FutureBuilder 状态如何
     if (_isRetrying) {
       return const Scaffold(body: Center(child: FluxLoader()));
@@ -133,18 +134,18 @@ class _AccountScreenState extends State<AccountScreen> {
                         ? Icons.error_outline
                         : Icons.warning_amber_rounded,
                     size: 48,
-                    color: AppColors.accentWarm,
+                    color: palette.warning,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     message,
-                    style: const TextStyle(
-                      color: AppColors.accentWarm,
+                    style: TextStyle(
+                      color: palette.warning,
                       fontSize: 16,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -163,14 +164,14 @@ class _AccountScreenState extends State<AccountScreen> {
                         ),
                       ),
                       if (isAuthExpired) ...[
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         ElevatedButton(
                           onPressed: () async {
                             await ApiConfig().clearAuth();
                             if (context.mounted) widget.onLogout();
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accent,
+                            backgroundColor: palette.accent,
                           ),
                           child: Text(
                             AppLocalizations.of(context)?.reLogin ?? 'Re-login',
@@ -185,7 +186,7 @@ class _AccountScreenState extends State<AccountScreen> {
           );
         }
         if (!snapshot.hasData) {
-          return const Center(child: FluxLoader(showTips: true));
+          return Center(child: FluxLoader(showTips: true));
         }
         final user = snapshot.data!['user'] as UserInfo;
 
@@ -218,7 +219,7 @@ class _AccountScreenState extends State<AccountScreen> {
               title: AppLocalizations.of(context)?.connected ??
                   'Connection Status',
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             AnimatedCard(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -230,37 +231,37 @@ class _AccountScreenState extends State<AccountScreen> {
                     height: 12,
                     decoration: BoxDecoration(
                       color: widget.connectionState == 'connected'
-                          ? AppColors.success
+                          ? palette.success
                           : widget.connectionState == 'connecting'
-                              ? AppColors.accent
+                              ? palette.accent
                               : widget.connectionState == 'error'
-                                  ? AppColors.danger
-                                  : AppColors.textSecondary,
+                                  ? palette.danger
+                                  : palette.textSecondary,
                       shape: BoxShape.circle,
                       boxShadow: [
                         if (widget.connectionState == 'connected')
                           BoxShadow(
-                            color: AppColors.success.withValues(alpha: 0.4),
+                            color: palette.success.withValues(alpha: 0.4),
                             blurRadius: 8,
                           ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Text(
                     widget.connectionStatus,
-                    style: TextStyle(color: AppColors.textPrimary),
+                    style: TextStyle(color: palette.textPrimary),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             SectionHeader(
               title:
                   AppLocalizations.of(context)?.subscription ?? 'Subscription',
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             AnimatedCard(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -271,16 +272,16 @@ class _AccountScreenState extends State<AccountScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.accent.withValues(alpha: 0.1),
+                          color: palette.accent.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.star,
-                          color: AppColors.accent,
+                          color: palette.accent,
                           size: 20,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -295,8 +296,8 @@ class _AccountScreenState extends State<AccountScreen> {
                                       context,
                                     )?.noSubscription ??
                                     'No Subscription'),
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
+                            style: TextStyle(
+                              color: palette.textPrimary,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
@@ -304,8 +305,8 @@ class _AccountScreenState extends State<AccountScreen> {
                           if (subInfo['expired_at'] != null)
                             Text(
                               '${AppLocalizations.of(context)?.expireDate ?? "Expires"}: ${Formatters.formatEpoch(subInfo['expired_at'])}',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
+                              style: TextStyle(
+                                color: palette.textSecondary,
                                 fontSize: 12,
                               ),
                             ),
@@ -313,43 +314,43 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                   // Progress Bar
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: percent,
-                      backgroundColor: AppColors.surfaceAlt,
-                      valueColor: AlwaysStoppedAnimation(AppColors.accent),
+                      backgroundColor: palette.surfaceAlt,
+                      valueColor: AlwaysStoppedAnimation(palette.accent),
                       minHeight: 8,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         '${AppLocalizations.of(context)?.usedTraffic ?? "Used"}: ${Formatters.formatBytes(used)}',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: TextStyle(
+                          color: palette.textSecondary,
                           fontSize: 12,
                         ),
                       ),
                       Text(
                         '${AppLocalizations.of(context)?.totalTraffic ?? "Total"}: ${Formatters.formatBytes(total)}',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: TextStyle(
+                          color: palette.textSecondary,
                           fontSize: 12,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   if (subInfo['reset_day'] != null)
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceAlt,
+                        color: palette.surfaceAlt,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -357,13 +358,13 @@ class _AccountScreenState extends State<AccountScreen> {
                           Icon(
                             Icons.refresh,
                             size: 16,
-                            color: AppColors.accentWarm,
+                            color: palette.warning,
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Text(
                             '${AppLocalizations.of(context)?.trafficResetInfo ?? "Traffic resets on"} ${subInfo['reset_day']}',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
+                            style: TextStyle(
+                              color: palette.textSecondary,
                               fontSize: 13,
                             ),
                           ),
@@ -374,13 +375,13 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
 
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             SectionHeader(
               title: AppLocalizations.of(context)?.basicInfo ?? 'Basic Info',
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             AnimatedCard(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -392,7 +393,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     AppLocalizations.of(context)?.email ?? 'Email',
                     user.email,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   _buildInfoRow(
                     context,
                     Icons.account_balance_wallet,
@@ -404,7 +405,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
 
             // 法律信息和关于
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             AnimatedCard(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -416,14 +417,14 @@ class _AccountScreenState extends State<AccountScreen> {
                         'Customer Service',
                     _showCustomerServiceDialog,
                   ),
-                  const Divider(height: 24, color: AppColors.border),
+                  Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
                     Icons.lock_outline_rounded,
                     '修改账号密码',
                     _showChangePasswordDialog,
                   ),
-                  const Divider(height: 24, color: AppColors.border),
+                  Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
                     Icons.palette_outlined,
@@ -435,14 +436,14 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ),
                   ),
-                  const Divider(height: 24, color: AppColors.border),
+                  Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
                     Icons.language_rounded,
                     '官方网站',
                     _openOfficialWebsite,
                   ),
-                  const Divider(height: 24, color: AppColors.border),
+                  Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
                     Icons.card_giftcard_rounded,
@@ -452,7 +453,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       MaterialPageRoute(builder: (_) => const InviteScreen()),
                     ),
                   ),
-                  const Divider(height: 24, color: AppColors.border),
+                  Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
                     Icons.receipt_long_outlined,
@@ -464,7 +465,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ),
                   ),
-                  const Divider(height: 24, color: AppColors.border),
+                  Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
                     Icons.description_outlined,
@@ -475,7 +476,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       MaterialPageRoute(builder: (_) => const TosScreen()),
                     ),
                   ),
-                  const Divider(height: 24, color: AppColors.border),
+                  Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
                     Icons.privacy_tip_outlined,
@@ -486,7 +487,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       MaterialPageRoute(builder: (_) => const PrivacyScreen()),
                     ),
                   ),
-                  const Divider(height: 24, color: AppColors.border),
+                  Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
                     Icons.info_outline,
@@ -497,19 +498,19 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             AnimatedCard(
               onTap: _logout,
               padding: const EdgeInsets.all(16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.logout, color: AppColors.danger, size: 20),
-                  const SizedBox(width: 8),
+                  Icon(Icons.logout, color: palette.danger, size: 20),
+                  SizedBox(width: 8),
                   Text(
                     AppLocalizations.of(context)?.logout ?? 'Logout',
                     style: TextStyle(
-                      color: AppColors.danger,
+                      color: palette.danger,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -519,14 +520,14 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
 
             // 版本号
-            const SizedBox(height: 16),
-            const Center(
+            SizedBox(height: 16),
+            Center(
               child: Text(
                 '屿哥云 v1.0.0',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: TextStyle(color: palette.textSecondary, fontSize: 12),
               ),
             ),
-            const SizedBox(height: 48),
+            SizedBox(height: 48),
           ],
         );
       },
@@ -555,6 +556,7 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Future<void> _showChangePasswordDialog() async {
+    final palette = context.appPalette;
     final formKey = GlobalKey<FormState>();
     final oldController = TextEditingController();
     final newController = TextEditingController();
@@ -569,10 +571,10 @@ class _AccountScreenState extends State<AccountScreen> {
           return StatefulBuilder(
             builder: (context, setDialogState) {
               return AlertDialog(
-                backgroundColor: AppColors.surface,
-                title: const Text(
+                backgroundColor: palette.surface,
+                title: Text(
                   '修改账号密码',
-                  style: TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: palette.textPrimary),
                 ),
                 content: Form(
                   key: formKey,
@@ -590,7 +592,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           validator: (value) =>
                               value == null || value.isEmpty ? '请输入当前密码' : null,
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         TextFormField(
                           controller: newController,
                           obscureText: true,
@@ -609,7 +611,7 @@ class _AccountScreenState extends State<AccountScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         TextFormField(
                           controller: confirmController,
                           obscureText: true,
@@ -628,10 +630,10 @@ class _AccountScreenState extends State<AccountScreen> {
                           },
                         ),
                         if (errorText != null) ...[
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           Text(
                             errorText!,
-                            style: const TextStyle(color: AppColors.danger),
+                            style: TextStyle(color: palette.danger),
                           ),
                         ],
                       ],
@@ -642,7 +644,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   TextButton(
                     onPressed:
                         loading ? null : () => Navigator.pop(dialogContext),
-                    child: const Text('取消'),
+                    child: Text('取消'),
                   ),
                   FilledButton(
                     onPressed: loading
@@ -681,14 +683,14 @@ class _AccountScreenState extends State<AccountScreen> {
                             }
                           },
                     child: loading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text('确认修改'),
+                        : Text('确认修改'),
                   ),
                 ],
               );
@@ -707,9 +709,10 @@ class _AccountScreenState extends State<AccountScreen> {
   static const String _customerQQ = '3896699819';
 
   Future<void> _showCustomerServiceDialog() async {
+    final palette = context.appPalette;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: palette.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -719,27 +722,27 @@ class _AccountScreenState extends State<AccountScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 '屿哥云客服',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: palette.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: 8),
+              Text(
                 '客服 QQ：3896699819',
-                style: TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: palette.textSecondary),
               ),
               ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.chat_rounded,
-                  color: AppColors.accent,
+                  color: palette.accent,
                 ),
-                title: const Text(
+                title: Text(
                   '联系在线客服',
-                  style: TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: palette.textPrimary),
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
@@ -749,13 +752,13 @@ class _AccountScreenState extends State<AccountScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.person_add_alt_1_rounded,
-                  color: AppColors.accent,
+                  color: palette.accent,
                 ),
-                title: const Text(
+                title: Text(
                   '添加客服好友',
-                  style: TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: palette.textPrimary),
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
@@ -765,13 +768,13 @@ class _AccountScreenState extends State<AccountScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(
+                leading: Icon(
                   Icons.copy_rounded,
-                  color: AppColors.accent,
+                  color: palette.accent,
                 ),
-                title: const Text(
+                title: Text(
                   '复制客服 QQ 号',
-                  style: TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: palette.textPrimary),
                 ),
                 onTap: () async {
                   await Clipboard.setData(
@@ -830,21 +833,22 @@ class _AccountScreenState extends State<AccountScreen> {
     String label,
     String value,
   ) {
+    final palette = context.appPalette;
     return Row(
       children: [
-        Icon(icon, size: 18, color: AppColors.accent.withValues(alpha: 0.7)),
-        const SizedBox(width: 12),
+        Icon(icon, size: 18, color: palette.accent.withValues(alpha: 0.7)),
+        SizedBox(width: 12),
         Text(
           '$label: ',
           style: Theme.of(
             context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          ).textTheme.bodyMedium?.copyWith(color: palette.textSecondary),
         ),
         Expanded(
           child: Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textPrimary,
+                  color: palette.textPrimary,
                   fontWeight: FontWeight.w600,
                 ),
             textAlign: TextAlign.end,
@@ -860,28 +864,29 @@ class _AccountScreenState extends State<AccountScreen> {
     String label,
     VoidCallback onTap,
   ) {
+    final palette = context.appPalette;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: AppColors.accent.withOpacity(0.7)),
-            const SizedBox(width: 12),
+            Icon(icon, size: 20, color: palette.accent.withOpacity(0.7)),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: palette.textPrimary,
                   fontSize: 15,
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right,
               size: 20,
-              color: AppColors.textSecondary,
+              color: palette.textSecondary,
             ),
           ],
         ),
@@ -890,10 +895,11 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   void _showAboutDialog(BuildContext context) {
+    final palette = context.appPalette;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: palette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
@@ -912,30 +918,30 @@ class _AccountScreenState extends State<AccountScreen> {
             Text(
               AppLocalizations.of(context)?.appDescription ??
                   '屿哥云 是一款安全、快速的网络加速服务。',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: palette.textSecondary,
                 fontSize: 13,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             _buildAboutFeature(
               Icons.hub_rounded,
               AppLocalizations.of(context)?.ixpAccess ?? 'IXP 接入',
               AppLocalizations.of(context)?.fastRoutingDesc ?? '极速分流优化',
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _buildAboutFeature(
               Icons.speed_rounded,
               AppLocalizations.of(context)?.highSpeed ?? '高速稳定',
               AppLocalizations.of(context)?.highSpeedDesc ?? '全球高速专线',
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _buildAboutFeature(
               Icons.security_rounded,
               AppLocalizations.of(context)?.noLogs ?? '安全无日志',
               AppLocalizations.of(context)?.privacyProtectionDesc ?? '严控隐私安全',
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _buildAboutFeature(
               Icons.lock_rounded,
               AppLocalizations.of(context)?.strongEncryption ?? '强力加密',
@@ -949,7 +955,7 @@ class _AccountScreenState extends State<AccountScreen> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               AppLocalizations.of(context)?.close ?? 'Close',
-              style: const TextStyle(color: AppColors.accent),
+              style: TextStyle(color: palette.accent),
             ),
           ),
         ],
@@ -958,23 +964,24 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Widget _buildAboutFeature(IconData icon, String title, String subtitle) {
+    final palette = context.appPalette;
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.accent.withOpacity(0.1),
+            color: palette.accent.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 16, color: AppColors.accent),
+          child: Icon(icon, size: 16, color: palette.accent),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,

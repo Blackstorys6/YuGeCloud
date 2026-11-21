@@ -29,17 +29,18 @@ class PlanDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     final prices = _prices();
     final base = MarkdownStyleSheet.fromTheme(Theme.of(context));
     final body = TextStyle(
       fontSize: 15,
       height: 1.65,
-      color: AppColors.textPrimary.withValues(alpha: 0.88),
+      color: palette.textPrimary.withValues(alpha: 0.9),
     );
     final content = (plan.content ?? '').trim();
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('套餐详情')),
+      backgroundColor: palette.background,
+      appBar: AppBar(title: Text('套餐详情')),
       body: Column(
         children: [
           Expanded(
@@ -49,8 +50,10 @@ class PlanDetailScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(28),
+                    color: palette.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                        color: palette.border.withValues(alpha: 0.75)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,8 +63,8 @@ class PlanDetailScreen extends StatelessWidget {
                           Expanded(
                             child: Text(
                               plan.name,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
+                              style: TextStyle(
+                                color: palette.textPrimary,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -73,13 +76,13 @@ class PlanDetailScreen extends StatelessWidget {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.accent.withValues(alpha: 0.15),
+                              color: palette.accent.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Text(
                               Formatters.formatBytes(plan.transferEnable),
-                              style: const TextStyle(
-                                color: AppColors.accent,
+                              style: TextStyle(
+                                color: palette.accent,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -88,10 +91,10 @@ class PlanDetailScreen extends StatelessWidget {
                       ),
                       if (prices.isNotEmpty) ...[
                         const SizedBox(height: 18),
-                        const Text(
+                        Text(
                           '价格',
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: palette.textSecondary,
                             fontSize: 14,
                           ),
                         ),
@@ -107,7 +110,7 @@ class PlanDetailScreen extends StatelessWidget {
                                   vertical: 10,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surfaceAlt,
+                                  color: palette.surfaceAlt,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Column(
@@ -115,16 +118,16 @@ class PlanDetailScreen extends StatelessWidget {
                                   children: [
                                     Text(
                                       p.key,
-                                      style: const TextStyle(
-                                        color: AppColors.textSecondary,
+                                      style: TextStyle(
+                                        color: palette.textSecondary,
                                         fontSize: 12,
                                       ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '¥${Formatters.formatCurrency(p.value)}',
-                                      style: const TextStyle(
-                                        color: AppColors.textPrimary,
+                                      style: TextStyle(
+                                        color: palette.textPrimary,
                                         fontSize: 18,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -142,11 +145,13 @@ class PlanDetailScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(28),
+                    color: palette.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                        color: palette.border.withValues(alpha: 0.75)),
                   ),
                   child: content.isEmpty
-                      ? const Text(
+                      ? Text(
                           '暂无套餐介绍',
                           style: TextStyle(color: AppColors.textSecondary),
                         )
@@ -168,9 +173,9 @@ class PlanDetailScreen extends StatelessWidget {
                             ),
                             strong: body.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: palette.textPrimary,
                             ),
-                            a: body.copyWith(color: AppColors.accent),
+                            a: body.copyWith(color: palette.accent),
                             listBullet: body,
                             blockquote: body.copyWith(
                               color: AppColors.textSecondary,
@@ -200,13 +205,13 @@ class PlanDetailScreen extends StatelessWidget {
                     }
                   },
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
+                    backgroundColor: palette.accent,
                     foregroundColor: Colors.white,
                     shape: const StadiumBorder(),
                   ),
-                  child: const Text(
+                  child: Text(
                     '立即购买',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

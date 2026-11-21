@@ -486,9 +486,11 @@ class _RootShellState extends State<RootShell> with WindowListener {
   }
 
   Widget _buildMainScaffold() {
+    final colors = Theme.of(context).colorScheme;
     // 桌面端使用侧边导航
     if (_isDesktop) {
       return Scaffold(
+        backgroundColor: colors.surface,
         body: Row(
           children: [
             // 侧边导航
@@ -519,17 +521,17 @@ class _RootShellState extends State<RootShell> with WindowListener {
                         children: [
                           IconButton(
                             icon: _isLoadingNodes
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: FluxLoader(
                                       size: 20,
-                                      color: AppColors.textPrimary,
+                                      color: colors.onSurface,
                                     ),
                                   )
-                                : const Icon(
+                                : Icon(
                                     Icons.storage_rounded,
-                                    color: AppColors.textPrimary,
+                                    color: colors.onSurface,
                                   ),
                             tooltip: AppLocalizations.of(context)?.nodeList ??
                                 'Node List',
@@ -583,11 +585,11 @@ class _RootShellState extends State<RootShell> with WindowListener {
                 fit: BoxFit.cover,
               ),
             ),
-            const SizedBox(width: 10),
-            const Text(
+            SizedBox(width: 10),
+            Text(
               '屿哥云',
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: colors.onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.4,
@@ -596,25 +598,25 @@ class _RootShellState extends State<RootShell> with WindowListener {
             const Spacer(),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.surface.withValues(alpha: 0.82),
+                color: colors.surfaceContainerHighest.withValues(alpha: 0.82),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: AppColors.accent.withValues(alpha: 0.12),
+                  color: colors.primary.withValues(alpha: 0.14),
                 ),
               ),
               child: IconButton(
                 icon: _isLoadingNodes
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: FluxLoader(
                           size: 20,
-                          color: AppColors.accent,
+                          color: colors.primary,
                         ),
                       )
-                    : const Icon(
+                    : Icon(
                         Icons.storage_rounded,
-                        color: AppColors.accent,
+                        color: colors.primary,
                       ),
                 tooltip: AppLocalizations.of(context)?.nodeList ?? 'Node List',
                 onPressed: _showNodePicker,
@@ -622,7 +624,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
             ),
           ],
         ),
-        backgroundColor: AppColors.background.withValues(alpha: 0.72),
+        backgroundColor: colors.surface.withValues(alpha: 0.88),
       ),
       body: Stack(
         children: [

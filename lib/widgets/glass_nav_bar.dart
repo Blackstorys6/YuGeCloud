@@ -15,30 +15,31 @@ class GlassNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final palette =
+        Theme.of(context).extension<AppPalette>() ?? AppPalette.light;
 
     return Padding(
       padding: const EdgeInsets.only(
-        bottom: 20,
-        left: 20,
-        right: 20,
+        bottom: 18,
+        left: 18,
+        right: 18,
       ),
       child: Container(
-        height: 76,
+        height: 72,
         padding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 8,
+          horizontal: 7,
+          vertical: 7,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(38),
+          color: palette.surface.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(26),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.9),
-            width: 1.2,
+            color: palette.border.withValues(alpha: 0.9),
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF66558A).withValues(alpha: 0.10),
-              blurRadius: 28,
+              color: palette.shadow,
+              blurRadius: 24,
               spreadRadius: 1,
               offset: const Offset(0, 8),
             ),
@@ -46,18 +47,27 @@ class GlassNavBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _item(0, Icons.dashboard_rounded, l?.connect ?? '连接'),
-            _item(1, Icons.layers_rounded, l?.subscription ?? '订阅'),
-            _item(2, Icons.person_rounded, l?.profile ?? '我的'),
+            _item(context, palette, 0, Icons.dashboard_rounded,
+                l?.connect ?? '连接'),
+            _item(context, palette, 1, Icons.layers_rounded,
+                l?.subscription ?? '订阅'),
+            _item(
+                context, palette, 2, Icons.person_rounded, l?.profile ?? '我的'),
           ],
         ),
       ),
     );
   }
 
-  Widget _item(int index, IconData icon, String label) {
+  Widget _item(
+    BuildContext context,
+    AppPalette palette,
+    int index,
+    IconData icon,
+    String label,
+  ) {
     final selected = selectedIndex == index;
-    final color = selected ? AppColors.accent : AppColors.textSecondary;
+    final color = selected ? palette.accent : palette.textSecondary;
 
     return Expanded(
       child: GestureDetector(
@@ -67,29 +77,30 @@ class GlassNavBar extends StatelessWidget {
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
-            gradient: selected
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFEDE7FA),
-                      Color(0xFFF8F5FD),
-                    ],
+            color: selected
+                ? palette.accent.withValues(alpha: 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: selected
+                ? Border.all(
+                    color: palette.accent.withValues(alpha: 0.12),
                   )
                 : null,
-            borderRadius: BorderRadius.circular(30),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 25),
+              Icon(icon, color: color, size: 23),
               const SizedBox(height: 3),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: color,
                   fontSize: 12,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  height: 1.1,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ],

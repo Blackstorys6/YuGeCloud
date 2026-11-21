@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../models/server_node.dart';
 import '../utils/node_utils.dart';
 import '../theme/app_colors.dart';
 
-/// 节点信息卡片组件
 class NodeInfoCard extends StatelessWidget {
   final ServerNode node;
 
@@ -14,36 +14,37 @@ class NodeInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     final latencyColor = node.latency == null
-        ? AppColors.textSecondary
+        ? palette.textSecondary
         : node.latency! < 100
-            ? AppColors.success
+            ? palette.success
             : node.latency! < 300
-                ? AppColors.warning
-                : AppColors.danger;
+                ? palette.warning
+                : palette.danger;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(17),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFFFFFFF),
-              Color(0xFFF7F5FC),
+              palette.surface,
+              palette.surfaceAlt,
             ],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppColors.border.withValues(alpha: 0.9),
+            color: palette.border.withValues(alpha: 0.9),
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.accent.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
+              color: palette.shadow.withValues(alpha: 0.6),
+              blurRadius: 16,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
@@ -54,14 +55,14 @@ class NodeInfoCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(7),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    color: palette.accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(11),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.location_on_rounded,
-                    color: AppColors.accent,
+                    color: palette.accent,
                     size: 20,
                   ),
                 ),
@@ -69,10 +70,11 @@ class NodeInfoCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     NodeUtils.extractCountry(node.name, context: context),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
+                      height: 1.25,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: palette.textPrimary,
                     ),
                   ),
                 ),
@@ -92,7 +94,7 @@ class NodeInfoCard extends StatelessWidget {
                     Text(
                       '${node.latency}ms',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         color: latencyColor,
                         fontWeight: FontWeight.w600,
                       ),

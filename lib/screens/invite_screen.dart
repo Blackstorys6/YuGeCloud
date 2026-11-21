@@ -78,7 +78,7 @@ class _InviteScreenState extends State<InviteScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.appPalette.background,
       appBar: AppBar(
         title: Text(
           AppLocalizations.of(context)?.inviteManagement ?? 'Invite Management',
@@ -96,7 +96,7 @@ class _InviteScreenState extends State<InviteScreen>
                 children: [
                   Text(
                     '${AppLocalizations.of(context)?.loadNodesFailed ?? "Loading failed"}: ${snapshot.error}',
-                    style: const TextStyle(color: AppColors.accentWarm),
+                    style: TextStyle(color: context.appPalette.accentWarm),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
@@ -159,10 +159,10 @@ class _InviteScreenState extends State<InviteScreen>
   Widget _buildSectionHeader(String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
-        color: Colors.white,
+        color: context.appPalette.textPrimary,
       ),
     );
   }
@@ -193,12 +193,12 @@ class _InviteScreenState extends State<InviteScreen>
                 ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.accent.withOpacity(borderOpacity),
+                  color: context.appPalette.accent.withOpacity(borderOpacity),
                   width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accent.withOpacity(shadowOpacity),
+                    color: context.appPalette.accent.withOpacity(shadowOpacity),
                     blurRadius: blurRadius,
                     spreadRadius: 1,
                     offset: const Offset(0, 4),
@@ -220,12 +220,12 @@ class _InviteScreenState extends State<InviteScreen>
                               color: Colors.white.withOpacity(0.05),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.1),
+                                color: context.appPalette.border,
                               ),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.account_balance_wallet_outlined,
-                              color: AppColors.accent,
+                              color: context.appPalette.accent,
                               size: 14,
                             ),
                           ),
@@ -234,7 +234,7 @@ class _InviteScreenState extends State<InviteScreen>
                             AppLocalizations.of(context)?.availableCommission ??
                                 'Available Commission',
                             style: TextStyle(
-                              color: AppColors.accent.withOpacity(0.8),
+                              color: context.appPalette.accent.withOpacity(0.8),
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
@@ -244,9 +244,9 @@ class _InviteScreenState extends State<InviteScreen>
                       const SizedBox(height: 12),
                       Text(
                         '¥${stat.availableCommission}',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 26,
+                        style: TextStyle(
+                          color: context.appPalette.textPrimary,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -0.5,
                           shadows: [
@@ -265,7 +265,7 @@ class _InviteScreenState extends State<InviteScreen>
                   Container(
                     width: 1,
                     height: 50,
-                    color: AppColors.accent.withOpacity(0.1),
+                    color: context.appPalette.accent.withOpacity(0.1),
                   ),
 
                   // Right Side: Compact Stats Column
@@ -295,16 +295,16 @@ class _InviteScreenState extends State<InviteScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F1014), // Darker surface
+                color: context.appPalette.surfaceAlt,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.accent.withOpacity(
+                  color: context.appPalette.accent.withOpacity(
                     borderOpacity * 0.5,
                   ), // Subtle border
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: context.appPalette.shadow,
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -321,7 +321,7 @@ class _InviteScreenState extends State<InviteScreen>
                   Container(
                     width: 1,
                     height: 32,
-                    color: AppColors.accent.withOpacity(0.1),
+                    color: context.appPalette.accent.withOpacity(0.1),
                   ),
                   _buildPerformanceItem(
                     Icons.percent_rounded,
@@ -345,15 +345,15 @@ class _InviteScreenState extends State<InviteScreen>
         Text(
           label,
           style: TextStyle(
-            color: AppColors.accent.withOpacity(0.5),
+            color: context.appPalette.accent.withOpacity(0.5),
             fontSize: 11,
           ),
         ),
         const SizedBox(width: 8),
         Text(
           value,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: TextStyle(
+            color: context.appPalette.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.bold,
           ),
@@ -368,10 +368,10 @@ class _InviteScreenState extends State<InviteScreen>
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.accent.withOpacity(0.08),
+            color: context.appPalette.accent.withOpacity(0.08),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: AppColors.accent, size: 18),
+          child: Icon(icon, color: context.appPalette.accent, size: 18),
         ),
         const SizedBox(width: 12),
         Column(
@@ -379,8 +379,8 @@ class _InviteScreenState extends State<InviteScreen>
           children: [
             Text(
               value,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                color: context.appPalette.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -388,7 +388,7 @@ class _InviteScreenState extends State<InviteScreen>
             Text(
               label,
               style: TextStyle(
-                color: AppColors.accent.withOpacity(0.4),
+                color: context.appPalette.accent.withOpacity(0.4),
                 fontSize: 11,
               ),
             ),
@@ -403,7 +403,7 @@ class _InviteScreenState extends State<InviteScreen>
       return Center(
         child: Text(
           AppLocalizations.of(context)?.noInviteData ?? 'No invite codes',
-          style: TextStyle(color: Colors.white.withOpacity(0.5)),
+          style: TextStyle(color: context.appPalette.textSecondary),
         ),
       );
     }
@@ -411,11 +411,12 @@ class _InviteScreenState extends State<InviteScreen>
       children: codes.map((code) {
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: context.appPalette.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+            border:
+                Border.all(color: context.appPalette.accent.withOpacity(0.3)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -425,10 +426,10 @@ class _InviteScreenState extends State<InviteScreen>
                 children: [
                   Text(
                     code.code,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.accent,
+                      color: context.appPalette.accent,
                       letterSpacing: 1,
                     ),
                   ),
@@ -437,7 +438,7 @@ class _InviteScreenState extends State<InviteScreen>
                     '${AppLocalizations.of(context)?.createdAt ?? "创建于"}: ${_formatDate(code.createdAt)}',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white.withOpacity(0.4),
+                      color: context.appPalette.textSecondary,
                     ),
                   ),
                 ],
@@ -451,7 +452,8 @@ class _InviteScreenState extends State<InviteScreen>
                       final url = '$domain/#/register?code=${code.code}';
                       Share.share('邀请你使用屿哥云： $url');
                     },
-                    icon: const Icon(Icons.share, color: Colors.white70),
+                    icon: Icon(Icons.share,
+                        color: context.appPalette.textSecondary),
                   ),
                   IconButton(
                     onPressed: () {
@@ -460,7 +462,8 @@ class _InviteScreenState extends State<InviteScreen>
                         const SnackBar(content: Text('Copied to clipboard')),
                       );
                     },
-                    icon: const Icon(Icons.copy, color: Colors.white70),
+                    icon: Icon(Icons.copy,
+                        color: context.appPalette.textSecondary),
                   ),
                 ],
               ),
@@ -513,7 +516,7 @@ class _InviteScreenState extends State<InviteScreen>
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.black, // Dark loader on silver
+                  color: Colors.white,
                 ),
               )
             : Text(
@@ -521,7 +524,7 @@ class _InviteScreenState extends State<InviteScreen>
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black, // Black text on silver
+                  color: Colors.white,
                 ),
               ),
       ),
@@ -535,7 +538,7 @@ class _InviteScreenState extends State<InviteScreen>
           padding: const EdgeInsets.all(24.0),
           child: Text(
             AppLocalizations.of(context)?.noInviteHistory ?? 'No records',
-            style: TextStyle(color: Colors.white.withOpacity(0.5)),
+            style: TextStyle(color: context.appPalette.textSecondary),
           ),
         ),
       );
@@ -548,9 +551,9 @@ class _InviteScreenState extends State<InviteScreen>
         final item = details[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: context.appPalette.surface,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -571,17 +574,17 @@ class _InviteScreenState extends State<InviteScreen>
                     _formatDate(item.createdAt),
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white.withOpacity(0.4),
+                      color: context.appPalette.textSecondary,
                     ),
                   ),
                 ],
               ),
               Text(
                 '+${item.commissionBalance}元',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.accent,
+                  color: context.appPalette.accent,
                 ),
               ),
             ],

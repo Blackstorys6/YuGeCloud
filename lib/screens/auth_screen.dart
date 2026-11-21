@@ -207,8 +207,7 @@ class _AuthScreenState extends State<AuthScreen>
       // 3. 请求成功，开始倒计时
       if (mounted) {
         setState(() {
-          _message =
-              AppLocalizations.of(context)?.sendCode ??
+          _message = AppLocalizations.of(context)?.sendCode ??
               'Verification code sent';
           _isSendingVerify = false;
         });
@@ -242,6 +241,7 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.black,
@@ -250,7 +250,7 @@ class _AuthScreenState extends State<AuthScreen>
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.background, // 确保纯黑背景
+        backgroundColor: AppColors.background,
         body: Stack(
           children: [
             // 0. 纯黑底层 (确保无闪烁)
@@ -318,7 +318,7 @@ class _AuthScreenState extends State<AuthScreen>
                               color: AppColors.textPrimary,
                               letterSpacing: 2,
                             ),
-                            child: const Text('屿哥云'),
+                            child: Text('屿哥云'),
                           ),
                           AnimatedSize(
                             duration: const Duration(milliseconds: 200),
@@ -328,7 +328,7 @@ class _AuthScreenState extends State<AuthScreen>
 
                           // Auth Card
                           GradientCard(
-                            padding: const EdgeInsets.all(32),
+                            padding: const EdgeInsets.all(24),
                             child: AnimatedSize(
                               duration: const Duration(milliseconds: 300),
                               curve: Curves.easeOutCubic,
@@ -340,18 +340,18 @@ class _AuthScreenState extends State<AuthScreen>
                                     child: Text(
                                       _mode == AuthMode.reset
                                           ? (AppLocalizations.of(
-                                                  context,
-                                                )?.resetPassword ??
-                                                'Reset Password')
+                                                context,
+                                              )?.resetPassword ??
+                                              'Reset Password')
                                           : _mode == AuthMode.login
-                                          ? (AppLocalizations.of(
-                                                  context,
-                                                )?.welcomeBack ??
-                                                'Welcome Back')
-                                          : (AppLocalizations.of(
-                                                  context,
-                                                )?.createAccount ??
-                                                'Create Account'),
+                                              ? (AppLocalizations.of(
+                                                    context,
+                                                  )?.welcomeBack ??
+                                                  'Welcome Back')
+                                              : (AppLocalizations.of(
+                                                    context,
+                                                  )?.createAccount ??
+                                                  'Create Account'),
                                       key: ValueKey(_mode),
                                       style: Theme.of(context)
                                           .textTheme
@@ -363,14 +363,14 @@ class _AuthScreenState extends State<AuthScreen>
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
-                                  const SizedBox(height: 32),
+                                  const SizedBox(height: 24),
 
                                   // Input Fields
                                   _buildTextField(
                                     controller: _emailController,
                                     label:
                                         AppLocalizations.of(context)?.email ??
-                                        'Email',
+                                            'Email',
                                     icon: Icons.email_outlined,
                                     keyboardType: TextInputType.emailAddress,
                                   ),
@@ -388,8 +388,7 @@ class _AuthScreenState extends State<AuthScreen>
                                   if (_mode != AuthMode.login) ...[
                                     _buildTextField(
                                       controller: _emailCodeController,
-                                      label:
-                                          AppLocalizations.of(
+                                      label: AppLocalizations.of(
                                             context,
                                           )?.verificationCode ??
                                           'Verification Code',
@@ -404,13 +403,13 @@ class _AuthScreenState extends State<AuthScreen>
                                         : _passwordController,
                                     label: _mode == AuthMode.reset
                                         ? (AppLocalizations.of(
-                                                context,
-                                              )?.newPassword ??
-                                              'New Password')
+                                              context,
+                                            )?.newPassword ??
+                                            'New Password')
                                         : (AppLocalizations.of(
-                                                context,
-                                              )?.password ??
-                                              'Password'),
+                                              context,
+                                            )?.password ??
+                                            'Password'),
                                     icon: Icons.lock_outline,
                                     obscureText: true,
                                   ),
@@ -425,7 +424,7 @@ class _AuthScreenState extends State<AuthScreen>
                                       ),
                                       child: Text(
                                         _message!,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           color: AppColors.accentWarm,
                                           fontSize: 13,
                                         ),
@@ -439,7 +438,7 @@ class _AuthScreenState extends State<AuthScreen>
                                       onPressed: _loading ? null : _submit,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppColors.accent,
-                                        foregroundColor: Colors.black,
+                                        foregroundColor: Colors.white,
                                         elevation: 0,
                                         shadowColor: Colors.transparent,
                                         shape: RoundedRectangleBorder(
@@ -460,19 +459,19 @@ class _AuthScreenState extends State<AuthScreen>
                                           : Text(
                                               _mode == AuthMode.reset
                                                   ? (AppLocalizations.of(
-                                                          context,
-                                                        )?.resetPassword ??
-                                                        'Reset Password')
+                                                        context,
+                                                      )?.resetPassword ??
+                                                      'Reset Password')
                                                   : _mode == AuthMode.login
-                                                  ? (AppLocalizations.of(
-                                                          context,
-                                                        )?.login ??
-                                                        'Login')
-                                                  : (AppLocalizations.of(
-                                                          context,
-                                                        )?.register ??
-                                                        'Register'),
-                                              style: const TextStyle(
+                                                      ? (AppLocalizations.of(
+                                                            context,
+                                                          )?.login ??
+                                                          'Login')
+                                                      : (AppLocalizations.of(
+                                                            context,
+                                                          )?.register ??
+                                                          'Register'),
+                                              style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.bold,
                                               ),
@@ -512,17 +511,15 @@ class _AuthScreenState extends State<AuthScreen>
                                   child: Text(
                                     _mode == AuthMode.login
                                         ? (AppLocalizations.of(
-                                                context,
-                                              )?.noAccount ??
-                                              "Don't have an account?")
+                                              context,
+                                            )?.noAccount ??
+                                            "Don't have an account?")
                                         : (AppLocalizations.of(
-                                                context,
-                                              )?.hasAccount ??
-                                              'Already have an account?'),
+                                              context,
+                                            )?.hasAccount ??
+                                            'Already have an account?'),
                                     style: TextStyle(
-                                      color: AppColors.accent.withValues(
-                                        alpha: 0.8,
-                                      ),
+                                      color: AppColors.accent,
                                     ),
                                   ),
                                 ),
@@ -548,7 +545,7 @@ class _AuthScreenState extends State<AuthScreen>
                                             context,
                                           )?.forgotPassword ??
                                           'Forgot Password?',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: AppColors.textSecondary,
                                       ),
                                     ),
@@ -612,7 +609,7 @@ class _AuthScreenState extends State<AuthScreen>
       return Text(
         '${_countdown}s',
         key: ValueKey('count_$_countdown'),
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.textSecondary,
           fontSize: 13,
           height: 1.0, // 紧凑行高，防止撑大
@@ -623,7 +620,7 @@ class _AuthScreenState extends State<AuthScreen>
     }
 
     // 3. 空闲状态
-    return const Text(
+    return Text(
       '获取验证码',
       key: ValueKey('send'),
       style: TextStyle(
@@ -643,21 +640,22 @@ class _AuthScreenState extends State<AuthScreen>
     TextInputType? keyboardType,
     Widget? suffix,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt.withValues(alpha: 0.5),
+        color: AppColors.surfaceAlt.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
       ),
       child: TextField(
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
-        style: const TextStyle(color: AppColors.textPrimary),
+        style: TextStyle(color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: label,
           hintStyle: TextStyle(
-            color: AppColors.textSecondary.withValues(alpha: 0.7),
+            color: AppColors.textSecondary,
           ),
           prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
           suffixIcon: suffix,

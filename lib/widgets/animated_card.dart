@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 
-/// Netflix/Premium 风格的动画卡片 - 带呼吸灯效果
 class AnimatedCard extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -9,7 +9,7 @@ class AnimatedCard extends StatefulWidget {
   final double? width;
   final double? height;
   final bool enableHover;
-  final bool enableBreathing; // 是否启用呼吸灯
+  final bool enableBreathing;
   final Duration animationDuration;
 
   const AnimatedCard({
@@ -39,7 +39,7 @@ class _AnimatedCardState extends State<AnimatedCard>
   @override
   void initState() {
     super.initState();
-    // 悬停动画
+
     _hoverController = AnimationController(
       vsync: this,
       duration: widget.animationDuration,
@@ -50,8 +50,7 @@ class _AnimatedCardState extends State<AnimatedCard>
         curve: Curves.easeOutCubic,
       ),
     );
-    
-    // 呼吸灯动画
+
     _breathingController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2500),
@@ -62,7 +61,7 @@ class _AnimatedCardState extends State<AnimatedCard>
         curve: Curves.easeInOut,
       ),
     );
-    
+
     if (widget.enableBreathing) {
       _breathingController.repeat(reverse: true);
     }
@@ -99,18 +98,23 @@ class _AnimatedCardState extends State<AnimatedCard>
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
+
     return GestureDetector(
       onTapDown: widget.onTap != null ? _handleTapDown : null,
       onTapUp: widget.onTap != null ? _handleTapUp : null,
       onTapCancel: widget.onTap != null ? _handleTapCancel : null,
       child: AnimatedBuilder(
-        animation: Listenable.merge([_hoverController, _breathingController]),
+        animation: Listenable.merge([
+          _hoverController,
+          _breathingController,
+        ]),
         builder: (context, child) {
-          // 呼吸灯强度 (0.0 - 1.0)
-          final breathValue = _breathingAnimation.value;
-          final glowOpacity = 0.08 + (breathValue * 0.12); // 0.08 - 0.20
-          final borderOpacity = 0.15 + (breathValue * 0.25); // 0.15 - 0.40
-          
+          final breathValue =
+              widget.enableBreathing ? _breathingAnimation.value : 0.0;
+          final glowOpacity = 0.025 + (breathValue * 0.055);
+          final borderOpacity = 0.35 + (breathValue * 0.25);
+
           return Transform.scale(
             scale: _scaleAnimation.value,
             child: Container(
@@ -122,30 +126,38 @@ class _AnimatedCardState extends State<AnimatedCard>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.surface,
-                    Color.lerp(AppColors.surface, AppColors.surfaceAlt, breathValue * 0.5)!,
+                    palette.surface,
+                    Color.lerp(
+                      palette.surface,
+                      palette.surfaceAlt,
+                      breathValue * 0.35,
+                    )!,
                   ],
                 ),
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
-                  color: _isHovered
-                      ? AppColors.accent.withOpacity(0.6)
-                      : AppColors.accent.withOpacity(borderOpacity),
+                  color:
+                      (_isHovered ? palette.accent : palette.border).withValues(
+                    alpha: _isHovered ? 0.8 : borderOpacity,
+                  ),
                   width: _isHovered ? 1.5 : 1,
                 ),
                 boxShadow: [
-                  // 呼吸光晕
                   BoxShadow(
-                    color: AppColors.accent.withOpacity(glowOpacity),
-                    blurRadius: 20 + (breathValue * 10),
+                    color: palette.accent.withValues(alpha: glowOpacity),
+                    blurRadius: 18 + (breathValue * 8),
                     spreadRadius: -2,
                   ),
-                  // 悬停时额外光晕
+                  BoxShadow(
+                    color: palette.shadow.withValues(alpha: 0.45),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
                   if (_isHovered)
                     BoxShadow(
-                      color: AppColors.accent.withOpacity(0.25),
-                      blurRadius: 30,
-                      offset: const Offset(0, 8),
+                      color: palette.accent.withValues(alpha: 0.12),
+                      blurRadius: 24,
+                      offset: const Offset(0, 7),
                     ),
                 ],
               ),

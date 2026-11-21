@@ -53,6 +53,7 @@ class _PlansScreenState extends State<PlansScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     return FutureBuilder<List<Plan>>(
       future: _plansFuture,
       builder: (context, snapshot) {
@@ -67,7 +68,7 @@ class _PlansScreenState extends State<PlansScreen> {
               children: [
                 Text(
                   message,
-                  style: const TextStyle(color: AppColors.accentWarm),
+                  style: TextStyle(color: palette.danger),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -114,14 +115,14 @@ class _PlansScreenState extends State<PlansScreen> {
               final price = (plan.monthPrice ?? 0) > 0
                   ? plan.monthPrice!
                   : (plan.yearPrice ?? 0) > 0
-                  ? plan.yearPrice!
-                  : (plan.onetimePrice ?? 0);
+                      ? plan.yearPrice!
+                      : (plan.onetimePrice ?? 0);
               final l10n = AppLocalizations.of(context);
               final priceLabel = (plan.monthPrice ?? 0) > 0
                   ? '/${l10n?.monthPrice ?? "月"}'
                   : (plan.yearPrice ?? 0) > 0
-                  ? '/${l10n?.yearPrice ?? "年"}'
-                  : '';
+                      ? '/${l10n?.yearPrice ?? "年"}'
+                      : '';
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -134,28 +135,27 @@ class _PlansScreenState extends State<PlansScreen> {
                               pageBuilder:
                                   (context, animation, secondaryAnimation) =>
                                       PlanDetailScreen(plan: plan),
-                              transitionsBuilder:
-                                  (
-                                    context,
-                                    animation,
-                                    secondaryAnimation,
-                                    child,
-                                  ) {
-                                    const begin = Offset(1.0, 0.0);
-                                    const end = Offset.zero;
-                                    const curve = Curves.easeOutCubic;
-                                    var tween = Tween(
-                                      begin: begin,
-                                      end: end,
-                                    ).chain(CurveTween(curve: curve));
-                                    return SlideTransition(
-                                      position: animation.drive(tween),
-                                      child: FadeTransition(
-                                        opacity: animation,
-                                        child: child,
-                                      ),
-                                    );
-                                  },
+                              transitionsBuilder: (
+                                context,
+                                animation,
+                                secondaryAnimation,
+                                child,
+                              ) {
+                                const begin = Offset(1.0, 0.0);
+                                const end = Offset.zero;
+                                const curve = Curves.easeOutCubic;
+                                var tween = Tween(
+                                  begin: begin,
+                                  end: end,
+                                ).chain(CurveTween(curve: curve));
+                                return SlideTransition(
+                                  position: animation.drive(tween),
+                                  child: FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  ),
+                                );
+                              },
                               transitionDuration: const Duration(
                                 milliseconds: 400,
                               ),
@@ -180,9 +180,9 @@ class _PlansScreenState extends State<PlansScreen> {
                                 children: [
                                   Text(
                                     plan.name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      color: Colors.white,
+                                      color: palette.textPrimary,
                                       fontSize: 17,
                                       letterSpacing: -0.3,
                                     ),
@@ -195,7 +195,7 @@ class _PlansScreenState extends State<PlansScreen> {
                                             )?.globalNodes ??
                                             'Global premium nodes'),
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.45),
+                                      color: palette.textSecondary,
                                       fontSize: 12,
                                     ),
                                     maxLines: 1,
@@ -214,19 +214,19 @@ class _PlansScreenState extends State<PlansScreen> {
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    AppColors.accent.withOpacity(0.15),
-                                    AppColors.accent.withOpacity(0.05),
+                                    palette.accent.withValues(alpha: 0.14),
+                                    palette.accent.withValues(alpha: 0.06),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: AppColors.accent.withOpacity(0.25),
+                                  color: palette.accent.withValues(alpha: 0.25),
                                 ),
                               ),
                               child: Text(
                                 Formatters.formatBytes(plan.transferEnable),
-                                style: const TextStyle(
-                                  color: AppColors.accent,
+                                style: TextStyle(
+                                  color: palette.accent,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -248,15 +248,15 @@ class _PlansScreenState extends State<PlansScreen> {
                                   TextSpan(
                                     text: '¥',
                                     style: TextStyle(
-                                      color: AppColors.accent,
+                                      color: palette.accent,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   TextSpan(
                                     text: Formatters.formatCurrency(price),
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: palette.textPrimary,
                                       fontSize: 24,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: -0.5,
@@ -266,7 +266,7 @@ class _PlansScreenState extends State<PlansScreen> {
                                     TextSpan(
                                       text: priceLabel,
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.4),
+                                        color: palette.textSecondary,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w400,
                                       ),
@@ -282,7 +282,7 @@ class _PlansScreenState extends State<PlansScreen> {
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.accent,
+                                color: palette.accent,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Row(
@@ -292,7 +292,7 @@ class _PlansScreenState extends State<PlansScreen> {
                                     AppLocalizations.of(context)?.subscribe ??
                                         'Subscribe',
                                     style: TextStyle(
-                                      color: Colors.black,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.w700,
                                       fontSize: 12,
                                     ),
@@ -300,7 +300,7 @@ class _PlansScreenState extends State<PlansScreen> {
                                   SizedBox(width: 2),
                                   Icon(
                                     Icons.arrow_forward_rounded,
-                                    color: Colors.black,
+                                    color: Colors.white,
                                     size: 14,
                                   ),
                                 ],
@@ -323,25 +323,26 @@ class _PlansScreenState extends State<PlansScreen> {
   }
 
   Widget _buildRedeemButton() {
+    final palette = context.appPalette;
     return GestureDetector(
       onTap: _showRedeemDialog,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: palette.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.accent.withValues(alpha: 0.1)),
+          border: Border.all(color: palette.accent.withValues(alpha: 0.18)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.card_giftcard, size: 20, color: AppColors.accent),
+            Icon(Icons.card_giftcard, size: 20, color: palette.accent),
             const SizedBox(width: 8),
             Text(
               AppLocalizations.of(context)?.redeemGiftCard ??
                   'Redeem Gift Card',
               style: TextStyle(
-                color: AppColors.textPrimary.withValues(alpha: 0.9),
+                color: palette.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
