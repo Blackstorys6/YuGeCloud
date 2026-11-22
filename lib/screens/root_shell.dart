@@ -44,6 +44,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
   ShellStatus _status = ShellStatus.disconnected;
   String _statusMessage = '';
+  String? _connectedNodeName;
   int _index = 0;
   bool _isSwitching = false;
   int _accountReload = 0;
@@ -213,9 +214,12 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
   Future<void> _checkInitialStatus() async {
     final isConnected = await _vpnService.isConnected();
+    final prefs = await SharedPreferences.getInstance();
+    final lastNodeName = prefs.getString('last_node_name');
     if (mounted && isConnected) {
       setState(() {
         _status = ShellStatus.connected;
+        _connectedNodeName = lastNodeName;
         _statusMessage = AppLocalizations.of(context)?.connected ?? '已连接';
       });
     }
@@ -223,10 +227,10 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
   void _onVpnStatusChanged(bool isConnected) {
     if (!mounted) return;
-    // 只处理从连接变为断开的情况（VPN 被后台杀死）
     if (!isConnected && _status == ShellStatus.connected) {
       setState(() {
         _status = ShellStatus.disconnected;
+        _connectedNodeName = null;
         _statusMessage = AppLocalizations.of(context)?.disconnected ?? '已断开';
       });
     } else if (isConnected && _status != ShellStatus.connected) {
@@ -311,6 +315,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
         await _vpnService.disconnect();
         setState(() {
           _status = ShellStatus.disconnected;
+          _connectedNodeName = null;
           _statusMessage =
               AppLocalizations.of(context)?.disconnected ?? '?????????';
         });
@@ -361,6 +366,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
   Future<void> _connectWithLastNode() async {
     setState(() {
       _status = ShellStatus.connecting;
+      _connectedNodeName = null;
       _statusMessage = AppLocalizations.of(context)?.loadingConfig ??
           '??????????????????...';
     });
@@ -378,6 +384,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
       if (nodes.isEmpty) {
         setState(() {
           _status = ShellStatus.error;
+          _connectedNodeName = null;
           _statusMessage =
               AppLocalizations.of(context)?.noNodes ?? '??????????????????';
         });
@@ -404,6 +411,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
       // ???????????????????????????
       setState(() {
+        _connectedNodeName = targetNode.name;
         _statusMessage =
             '${AppLocalizations.of(context)?.connecting ?? "????????????"} ${targetNode.name}...';
       });
@@ -420,6 +428,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
       setState(() {
         _status = success ? ShellStatus.connected : ShellStatus.error;
+        if (!success) _connectedNodeName = null;
         _statusMessage = success
             ? '${AppLocalizations.of(context)?.connected ?? "?????????"} ${targetNode.name}'
             : AppLocalizations.of(context)?.connectionFailed ?? '????????????';
@@ -427,6 +436,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
     } catch (e) {
       setState(() {
         _status = ShellStatus.error;
+        _connectedNodeName = null;
         _statusMessage =
             '${AppLocalizations.of(context)?.error ?? "??????"}: ${e.toString().replaceAll('Exception: ', '')}';
       });
@@ -438,6 +448,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
     _isConnecting = true;
     setState(() {
       _status = ShellStatus.connecting;
+      _connectedNodeName = node.name;
       _statusMessage =
           '${AppLocalizations.of(context)?.connecting ?? "正在连接"} ${node.name}...';
     });
@@ -453,6 +464,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
       setState(() {
         _status = success ? ShellStatus.connected : ShellStatus.error;
+        if (!success) _connectedNodeName = null;
         _statusMessage = success
             ? '${AppLocalizations.of(context)?.connected ?? "已连接"} ${node.name}'
             : AppLocalizations.of(context)?.connectionFailed ?? '连接失败';
@@ -460,6 +472,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
     } catch (e) {
       setState(() {
         _status = ShellStatus.error;
+        _connectedNodeName = null;
         _statusMessage = '${AppLocalizations.of(context)?.error ?? "错误"}: $e';
       });
     } finally {
@@ -514,6 +527,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
           isConnected: _status == ShellStatus.connected,
           isConnecting: _isConnecting || _status == ShellStatus.connecting,
           statusMessage: _statusMessage,
+          connectedNodeName: _connectedNodeName,
         );
       case 1: // Plans
         return PlansScreen(
@@ -678,33 +692,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
                 ),
                 tooltip: '公告',
                 onPressed: _openNotice,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest.withValues(alpha: 0.82),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: colors.primary.withValues(alpha: 0.14),
-                ),
-              ),
-              child: IconButton(
-                icon: _isLoadingNodes
-                    ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: FluxLoader(
-                          size: 20,
-                          color: colors.primary,
-                        ),
-                      )
-                    : Icon(
-                        Icons.storage_rounded,
-                        color: colors.primary,
-                      ),
-                tooltip: AppLocalizations.of(context)?.nodeList ?? 'Node List',
-                onPressed: _showNodePicker,
               ),
             ),
           ],

@@ -21,6 +21,7 @@ class HomeDashboard extends StatefulWidget {
   final VoidCallback? onSelectNode;
   final VoidCallback? onOpenPlans;
   final String? selectedNodeName;
+  final String? connectedNodeName;
   final int reloadToken;
 
   const HomeDashboard({
@@ -33,6 +34,7 @@ class HomeDashboard extends StatefulWidget {
     this.onSelectNode,
     this.onOpenPlans,
     this.selectedNodeName,
+    this.connectedNodeName,
     this.reloadToken = 0,
   });
 
@@ -74,7 +76,7 @@ class _HomeDashboardState extends State<HomeDashboard>
     super.dispose();
   }
 
-  static const double _navSpace = 108;
+  static const double _navSpace = 100;
 
   Future<void> _loadData({bool force = false}) async {
     try {
@@ -152,7 +154,7 @@ class _HomeDashboardState extends State<HomeDashboard>
             children: [
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       return FittedBox(
@@ -165,11 +167,11 @@ class _HomeDashboardState extends State<HomeDashboard>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildUsageBar(),
-                              const SizedBox(height: 28),
+                              const SizedBox(height: 16),
                               _buildUsageText(),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 14),
                               _buildExpiryRow(),
-                              const SizedBox(height: 28),
+                              const SizedBox(height: 16),
                               _buildEntryCard(context),
                             ],
                           ),
@@ -339,7 +341,15 @@ class _HomeDashboardState extends State<HomeDashboard>
           _entryRow(
             icon: Icons.dns_rounded,
             title: '服务器',
-            subtitle: widget.selectedNodeName ?? '点击选择节点',
+            subtitle: widget.isConnecting
+                ? (widget.connectedNodeName == null
+                    ? '正在连接…'
+                    : '正在连接 · ${widget.connectedNodeName}')
+                : widget.isConnected
+                    ? (widget.connectedNodeName == null
+                        ? '已连接'
+                        : '已连接 · ${widget.connectedNodeName}')
+                    : '请选择服务器',
             onTap: widget.onSelectNode,
           ),
           Divider(
@@ -368,7 +378,7 @@ class _HomeDashboardState extends State<HomeDashboard>
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           children: [
             Icon(icon, color: _homePalette(context).accent, size: 30),
@@ -416,21 +426,6 @@ class _HomeDashboardState extends State<HomeDashboard>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (widget.statusMessage.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
-                widget.statusMessage,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: isBusy
-                      ? _homePalette(context).accent
-                      : _homePalette(context).textSecondary,
-                  fontSize: 13,
-                ),
-              ),
-            ),
           SizedBox(
             width: double.infinity,
             height: 60,
