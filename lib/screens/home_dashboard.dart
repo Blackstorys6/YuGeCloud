@@ -1,11 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui'; // Required for ImageFilter
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/generated/app_localizations.dart';
-import '../models/notice.dart';
 import '../models/user_subscribe.dart';
 import '../services/user_data_service.dart';
 import '../services/v2ray_service.dart';
@@ -24,7 +20,6 @@ class HomeDashboard extends StatefulWidget {
   final String statusMessage;
   final VoidCallback? onSelectNode;
   final VoidCallback? onOpenPlans;
-  final VoidCallback? onOpenProfile;
   final String? selectedNodeName;
   final int reloadToken;
 
@@ -37,7 +32,6 @@ class HomeDashboard extends StatefulWidget {
     this.statusMessage = '',
     this.onSelectNode,
     this.onOpenPlans,
-    this.onOpenProfile,
     this.selectedNodeName,
     this.reloadToken = 0,
   });
@@ -70,8 +64,6 @@ class _HomeDashboardState extends State<HomeDashboard>
       CurvedAnimation(parent: _glowController, curve: Curves.easeInOutSine),
     );
 
-    // 延迟检查公告
-    Future.delayed(const Duration(seconds: 1), _checkNotice);
     _loadData();
   }
 
@@ -103,22 +95,6 @@ class _HomeDashboardState extends State<HomeDashboard>
     if (oldWidget.isConnected != widget.isConnected ||
         oldWidget.reloadToken != widget.reloadToken) {
       _loadData(force: true);
-    }
-  }
-
-  Future<void> _openNotice() async {
-    try {
-      final data = await UserDataService().getNotices(forceRefresh: true);
-      if (!mounted) return;
-      if (data.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('暂无公告')));
-        return;
-      }
-      _showNoticeDialog(Notice.fromJson(data.first));
-    } catch (e) {
-      debugPrint('Open notice failed: $e');
     }
   }
 
@@ -175,69 +151,37 @@ class _HomeDashboardState extends State<HomeDashboard>
           child: Column(
             children: [
               Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
+                child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTopBar(context),
-                      const SizedBox(height: 20),
-                      _buildUsageBar(),
-                      const SizedBox(height: 28),
-                      _buildUsageText(),
-                      const SizedBox(height: 24),
-                      _buildExpiryRow(),
-                      const SizedBox(height: 28),
-                      _buildEntryCard(context),
-                    ],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.topCenter,
+                        child: SizedBox(
+                          width: constraints.maxWidth,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildUsageBar(),
+                              const SizedBox(height: 28),
+                              _buildUsageText(),
+                              const SizedBox(height: 24),
+                              _buildExpiryRow(),
+                              const SizedBox(height: 28),
+                              _buildEntryCard(context),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
               _buildBottomConnect(isBusy),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(BuildContext context) {
-    final title = AppLocalizations.of(context)?.appTitle ?? '屿哥云';
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: _homePalette(context).textPrimary,
-              fontSize: 28,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        _circleButton(Icons.notifications_rounded, _openNotice),
-        if (widget.onOpenProfile != null) ...[
-          const SizedBox(width: 10),
-          _circleButton(Icons.person_rounded, widget.onOpenProfile),
-        ],
-      ],
-    );
-  }
-
-  Widget _circleButton(IconData icon, VoidCallback? onTap) {
-    return Material(
-      color: _homePalette(context).surface,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(icon, color: _homePalette(context).textPrimary, size: 24),
         ),
       ),
     );
@@ -961,6 +905,7 @@ class _HomeDashboardState extends State<HomeDashboard>
     String title,
     String subtitle,
   ) {
+    final isLightTheme = Theme.of(context).brightness == Brightness.light;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -971,9 +916,11 @@ class _HomeDashboardState extends State<HomeDashboard>
             width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(
+              alpha: isLightTheme ? 0.1575 : 0.1,
+            ),
+            blurRadius: isLightTheme ? 4.9 : 4,
+            offset: isLightTheme ? const Offset(0, 2.1) : const Offset(0, 2),
           ),
         ],
       ),
@@ -1170,28 +1117,6 @@ class _HomeDashboardState extends State<HomeDashboard>
     );
   }
 
-  Future<void> _checkNotice() async {
-    try {
-      final userDataService = UserDataService();
-      final data = await userDataService.getNotices();
-
-      if (data.isEmpty) return;
-
-      // 取最新的一条公告
-      final latestNotice = Notice.fromJson(data.first);
-
-      final prefs = await SharedPreferences.getInstance();
-      final lastReadId = prefs.getInt('last_read_notice_id') ?? 0;
-
-      if (latestNotice.id > lastReadId) {
-        if (!mounted) return;
-        _showNoticeDialog(latestNotice);
-      }
-    } catch (e) {
-      debugPrint('Fetching notice failed: $e');
-    }
-  }
-
   Widget _buildInviteBanner(BuildContext context) {
     return GestureDetector(
       onTap: () {
@@ -1260,200 +1185,6 @@ class _HomeDashboardState extends State<HomeDashboard>
             ),
             const Icon(Icons.chevron_right, color: Colors.white54),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showNoticeDialog(Notice notice) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withValues(alpha: 0.5),
-      transitionDuration: const Duration(milliseconds: 500),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return const SizedBox(); // 这里的 builder 不重要，主要看 transitionBuilder
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        // 使用弹簧曲线
-        final curve = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutBack,
-        );
-
-        return ScaleTransition(
-          scale: Tween<double>(begin: 0.8, end: 1.0).animate(curve),
-          child: FadeTransition(
-            opacity: animation,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: LogNoticeDialog(notice: notice),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class LogNoticeDialog extends StatelessWidget {
-  final Notice notice;
-
-  const LogNoticeDialog({super.key, required this.notice});
-
-  Future<void> _dismissForever(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('last_read_notice_id', notice.id);
-    if (context.mounted) Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final maxH = MediaQuery.of(context).size.height * 0.72;
-    final base = MarkdownStyleSheet.fromTheme(Theme.of(context));
-    final bodyStyle = TextStyle(
-      fontSize: 15,
-      height: 1.65,
-      color: _homePalette(context).textPrimary.withValues(alpha: 0.88),
-    );
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          constraints: BoxConstraints(maxWidth: 400, maxHeight: maxH),
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            color: _homePalette(context).surface,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.45),
-                blurRadius: 30,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.notifications_active_rounded,
-                      color: _homePalette(context).accent,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        notice.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w700,
-                          color: _homePalette(context).textPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (notice.imgUrl != null && notice.imgUrl!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.network(
-                              notice.imgUrl!,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  const SizedBox.shrink(),
-                            ),
-                          ),
-                        ),
-                      MarkdownBody(
-                        data: notice.content,
-                        styleSheet: base.copyWith(
-                          p: bodyStyle,
-                          h1: bodyStyle.copyWith(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          h2: bodyStyle.copyWith(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          h3: bodyStyle.copyWith(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          strong: bodyStyle.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: _homePalette(context).textPrimary,
-                          ),
-                          a: bodyStyle.copyWith(
-                              color: _homePalette(context).accent),
-                          listBullet: bodyStyle,
-                          blockquote: bodyStyle.copyWith(
-                            color: _homePalette(context).textSecondary,
-                          ),
-                          code: bodyStyle.copyWith(
-                            fontFamily: 'monospace',
-                            backgroundColor: _homePalette(context).surfaceAlt,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _dismissForever(context),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _homePalette(context).textSecondary,
-                          side: BorderSide(color: _homePalette(context).border),
-                          shape: const StadiumBorder(),
-                          minimumSize: const Size.fromHeight(50),
-                        ),
-                        child: const Text('不再提示'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _homePalette(context).accent,
-                          foregroundColor: Colors.white,
-                          shape: const StadiumBorder(),
-                          minimumSize: const Size.fromHeight(50),
-                        ),
-                        child: Text(
-                          AppLocalizations.of(context)?.gotIt ?? '我知道了',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -31,10 +31,11 @@ class _AnimatedMeshBackgroundState extends State<AnimatedMeshBackground>
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     return Stack(
       children: [
         // Dark background base
-        Container(color: AppColors.background),
+        Container(color: palette.background),
         // Animated Mesh
         AnimatedBuilder(
           animation: _controller,
@@ -42,8 +43,8 @@ class _AnimatedMeshBackgroundState extends State<AnimatedMeshBackground>
             return CustomPaint(
               painter: _MeshPainter(
                 animationValue: _controller.value,
-                primaryColor: AppColors.accent,
-                secondaryColor: AppColors.surface,
+                primaryColor: palette.accent,
+                secondaryColor: palette.surface,
               ),
               size: Size.infinite,
             );
@@ -56,8 +57,8 @@ class _AnimatedMeshBackgroundState extends State<AnimatedMeshBackground>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                AppColors.background.withValues(alpha: 0.1),
-                AppColors.background.withValues(alpha: 0.5),
+                palette.background.withValues(alpha: 0.1),
+                palette.background.withValues(alpha: 0.5),
               ],
             ),
           ),

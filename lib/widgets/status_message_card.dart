@@ -22,6 +22,7 @@ class StatusMessageCard extends StatelessWidget {
     if (message.isEmpty) return const SizedBox.shrink();
 
     final palette = context.appPalette;
+    final isLightTheme = Theme.of(context).brightness == Brightness.light;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -38,9 +39,11 @@ class StatusMessageCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: palette.shadow.withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              color: palette.shadow.withValues(
+                alpha: isLightTheme ? 0.1575 : 0.35,
+              ),
+              blurRadius: isLightTheme ? 4.9 : 10,
+              offset: isLightTheme ? const Offset(0, 2.1) : const Offset(0, 3),
             ),
           ],
         ),

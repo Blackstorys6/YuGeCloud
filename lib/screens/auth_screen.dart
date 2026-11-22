@@ -243,18 +243,26 @@ class _AuthScreenState extends State<AuthScreen>
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.black,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.black,
-        systemNavigationBarIconBrightness: Brightness.light,
+      value: (Theme.of(context).brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark).copyWith(
+        statusBarColor: context.appPalette.background,
+        statusBarIconBrightness:
+            Theme.of(context).brightness == Brightness.dark
+                ? Brightness.light
+                : Brightness.dark,
+        systemNavigationBarColor: context.appPalette.background,
+        systemNavigationBarIconBrightness:
+            Theme.of(context).brightness == Brightness.dark
+                ? Brightness.light
+                : Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.appPalette.background,
         body: Stack(
           children: [
             // 0. 纯黑底层 (确保无闪烁)
-            Positioned.fill(child: Container(color: AppColors.background)),
+            Positioned.fill(child: Container(color: context.appPalette.background)),
             // 1. Dynamic Background (Fade In to match Splash's blackness)
             Positioned.fill(
               child: FadeTransition(
@@ -315,7 +323,7 @@ class _AuthScreenState extends State<AuthScreen>
                               fontFamily: 'Roboto',
                               fontSize: isKeyboardOpen ? 24 : 32,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                              color: context.appPalette.textPrimary,
                               letterSpacing: 2,
                             ),
                             child: Text('屿哥云'),
@@ -358,7 +366,7 @@ class _AuthScreenState extends State<AuthScreen>
                                           .headlineSmall
                                           ?.copyWith(
                                             fontWeight: FontWeight.w700,
-                                            color: AppColors.textPrimary,
+                                            color: context.appPalette.textPrimary,
                                           ),
                                       textAlign: TextAlign.center,
                                     ),
@@ -425,7 +433,7 @@ class _AuthScreenState extends State<AuthScreen>
                                       child: Text(
                                         _message!,
                                         style: TextStyle(
-                                          color: AppColors.accentWarm,
+                                          color: context.appPalette.accentWarm,
                                           fontSize: 13,
                                         ),
                                         textAlign: TextAlign.center,
@@ -437,7 +445,7 @@ class _AuthScreenState extends State<AuthScreen>
                                     child: ElevatedButton(
                                       onPressed: _loading ? null : _submit,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.accent,
+                                        backgroundColor: context.appPalette.accent,
                                         foregroundColor: Colors.white,
                                         elevation: 0,
                                         shadowColor: Colors.transparent,
@@ -448,12 +456,12 @@ class _AuthScreenState extends State<AuthScreen>
                                         ),
                                       ),
                                       child: _loading
-                                          ? const SizedBox(
+                                          ? SizedBox(
                                               width: 24,
                                               height: 24,
                                               child: FluxLoader(
                                                 size: 24,
-                                                color: Colors.black,
+                                                color: Theme.of(context).colorScheme.onPrimary,
                                               ),
                                             )
                                           : Text(
@@ -519,7 +527,7 @@ class _AuthScreenState extends State<AuthScreen>
                                             )?.hasAccount ??
                                             'Already have an account?'),
                                     style: TextStyle(
-                                      color: AppColors.accent,
+                                      color: context.appPalette.accent,
                                     ),
                                   ),
                                 ),
@@ -535,7 +543,7 @@ class _AuthScreenState extends State<AuthScreen>
                                     margin: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                     ),
-                                    color: AppColors.border,
+                                    color: context.appPalette.border,
                                   ),
                                   TextButton(
                                     onPressed: () =>
@@ -546,7 +554,7 @@ class _AuthScreenState extends State<AuthScreen>
                                           )?.forgotPassword ??
                                           'Forgot Password?',
                                       style: TextStyle(
-                                        color: AppColors.textSecondary,
+                                        color: context.appPalette.textSecondary,
                                       ),
                                     ),
                                   ),
@@ -596,11 +604,11 @@ class _AuthScreenState extends State<AuthScreen>
   Widget _buildButtonContent(bool isCountingDown) {
     // 1. 发送中状态 (Loading)
     if (_isSendingVerify) {
-      return const SizedBox(
-        key: ValueKey('loading'),
+      return SizedBox(
+        key: const ValueKey('loading'),
         width: 18,
         height: 18,
-        child: FluxLoader(size: 18, color: AppColors.textSecondary),
+        child: FluxLoader(size: 18, color: context.appPalette.textSecondary),
       );
     }
 
@@ -610,7 +618,7 @@ class _AuthScreenState extends State<AuthScreen>
         '${_countdown}s',
         key: ValueKey('count_$_countdown'),
         style: TextStyle(
-          color: AppColors.textSecondary,
+          color: context.appPalette.textSecondary,
           fontSize: 13,
           height: 1.0, // 紧凑行高，防止撑大
           fontWeight: FontWeight.w500, //稍微细一点
@@ -624,7 +632,7 @@ class _AuthScreenState extends State<AuthScreen>
       '获取验证码',
       key: ValueKey('send'),
       style: TextStyle(
-        color: AppColors.accent,
+        color: context.appPalette.accent,
         fontSize: 13,
         height: 1.0,
         fontWeight: FontWeight.w600,
@@ -643,21 +651,21 @@ class _AuthScreenState extends State<AuthScreen>
     final colors = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt.withValues(alpha: 0.45),
+        color: context.appPalette.surfaceAlt.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+        border: Border.all(color: context.appPalette.border.withValues(alpha: 0.6)),
       ),
       child: TextField(
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
-        style: TextStyle(color: AppColors.textPrimary),
+        style: TextStyle(color: context.appPalette.textPrimary),
         decoration: InputDecoration(
           hintText: label,
           hintStyle: TextStyle(
-            color: AppColors.textSecondary,
+            color: context.appPalette.textSecondary,
           ),
-          prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
+          prefixIcon: Icon(icon, color: context.appPalette.textSecondary, size: 20),
           suffixIcon: suffix,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/plan.dart';
+import '../models/notice.dart';
 import '../services/latency_test_service.dart';
 import '../services/subscription_service.dart';
 
@@ -22,6 +23,7 @@ import '../widgets/flux_loader.dart';
 import '../widgets/glass_nav_bar.dart';
 import '../widgets/desktop_nav.dart';
 import '../widgets/node_picker_sheet.dart';
+import '../widgets/notice_dialog.dart';
 
 import 'package:window_manager/window_manager.dart';
 
@@ -48,6 +50,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
   bool _isConnecting = false;
   List<ServerNode>? _nodesCache;
   bool _isInitializing = true; // 全局初始化状态
+  bool _isNoticeDialogOpen = false;
 
   // Lazy loading: 跟踪哪些页面已经被访问
   final Set<int> _visitedIndices = {0}; // 默认加载首页
@@ -93,14 +96,71 @@ class _RootShellState extends State<RootShell> with WindowListener {
       // 5. 初始化完成
       if (mounted) {
         setState(() => _isInitializing = false);
+        _scheduleInitialNoticeCheck();
       }
     } catch (e) {
       debugPrint('Initialization failed: $e');
       // 即使部分失败，也允许进入主页
       if (mounted) {
         setState(() => _isInitializing = false);
+        _scheduleInitialNoticeCheck();
       }
     }
+  }
+
+  void _scheduleInitialNoticeCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkNotice();
+    });
+  }
+
+  Future<void> _checkNotice() async {
+    try {
+      final data = await UserDataService().getNotices();
+      if (!mounted || data.isEmpty || _isNoticeDialogOpen) return;
+
+      final latestNotice = Notice.fromJson(data.first);
+      final prefs = await SharedPreferences.getInstance();
+      final lastReadId = prefs.getInt('last_read_notice_id') ?? 0;
+
+      if (latestNotice.id > lastReadId && mounted) {
+        _showNoticeDialog(latestNotice);
+      }
+    } catch (e) {
+      debugPrint('Fetching notice failed: $e');
+    }
+  }
+
+  Future<void> _openNotice() async {
+    try {
+      final data = await UserDataService().getNotices(forceRefresh: true);
+      if (!mounted) return;
+
+      if (data.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂无公告')),
+        );
+        return;
+      }
+
+      _showNoticeDialog(Notice.fromJson(data.first));
+    } catch (e) {
+      debugPrint('Open notice failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('公告加载失败，请稍后重试')),
+        );
+      }
+    }
+  }
+
+  void _showNoticeDialog(Notice notice) {
+    if (!mounted || _isNoticeDialogOpen) return;
+
+    _isNoticeDialogOpen = true;
+    showNoticeDialog(context, notice).whenComplete(() {
+      _isNoticeDialogOpen = false;
+    });
   }
 
   Future<void> _initWindow() async {
@@ -450,7 +510,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
           onReconnectRequested: _reconnectConnection,
           onSelectNode: _showNodePicker,
           onOpenPlans: () => _switchTab(1),
-          onOpenProfile: () => _switchTab(2),
           reloadToken: _accountReload,
           isConnected: _status == ShellStatus.connected,
           isConnecting: _isConnecting || _status == ShellStatus.connecting,
@@ -519,6 +578,14 @@ class _RootShellState extends State<RootShell> with WindowListener {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.notifications_none_rounded,
+                              color: colors.onSurface,
+                            ),
+                            tooltip: '公告',
+                            onPressed: _openNotice,
+                          ),
                           IconButton(
                             icon: _isLoadingNodes
                                 ? SizedBox(
@@ -596,6 +663,24 @@ class _RootShellState extends State<RootShell> with WindowListener {
               ),
             ),
             const Spacer(),
+            Container(
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHighest.withValues(alpha: 0.82),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.14),
+                ),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  Icons.notifications_none_rounded,
+                  color: colors.primary,
+                ),
+                tooltip: '公告',
+                onPressed: _openNotice,
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
                 color: colors.surfaceContainerHighest.withValues(alpha: 0.82),

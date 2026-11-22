@@ -103,12 +103,12 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.96),
+            color: context.appPalette.surface.withValues(alpha: 0.96),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(color: AppColors.border.withValues(alpha: 0.9)),
+            border: Border.all(color: context.appPalette.border.withValues(alpha: 0.9)),
             boxShadow: [
               BoxShadow(
-                color: AppColors.accent.withValues(alpha: 0.08),
+                color: context.appPalette.accent.withValues(alpha: 0.08),
                 blurRadius: 28,
                 offset: const Offset(0, -8),
               ),
@@ -121,7 +121,7 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.accentSoft.withValues(alpha: 0.55),
+                  color: context.appPalette.accentSoft.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -132,8 +132,8 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
                     Expanded(
                       child: Text(
                         l?.selectNode ?? '选择节点',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
+                        style: TextStyle(
+                          color: context.appPalette.textPrimary,
                           fontSize: 22,
                           fontWeight: FontWeight.w600,
                         ),
@@ -145,16 +145,16 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
                       icon: Icon(
                         Icons.speed_rounded,
                         color: _testing
-                            ? AppColors.textSecondary
-                            : AppColors.accent,
+                            ? context.appPalette.textSecondary
+                            : context.appPalette.accent,
                       ),
                     ),
                     IconButton(
                       tooltip: l?.refresh ?? '刷新',
                       onPressed: _isLoading ? null : () => _load(force: true),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.refresh_rounded,
-                        color: AppColors.textSecondary,
+                        color: context.appPalette.textSecondary,
                       ),
                     ),
                   ],
@@ -167,7 +167,7 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
                   child: Center(
                     child: Text(
                       l?.noNodes ?? '暂无可用节点',
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: context.appPalette.textSecondary),
                     ),
                   ),
                 )
@@ -190,7 +190,7 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
 
   Widget _buildItem(ServerNode n) {
     return Material(
-      color: AppColors.surface.withValues(alpha: 0.82),
+      color: context.appPalette.surface.withValues(alpha: 0.82),
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -202,12 +202,12 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppColors.border.withValues(alpha: 0.85),
+              color: context.appPalette.border.withValues(alpha: 0.85),
             ),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFFFFFFF), Color(0xFFF8F6FC)],
+              colors: [context.appPalette.surfaceAlt, context.appPalette.surface],
             ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -221,8 +221,8 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
                       n.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: TextStyle(
+                        color: context.appPalette.textPrimary,
                         fontSize: 17,
                         fontWeight: FontWeight.w500,
                       ),
@@ -232,8 +232,8 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
                       children: [
                         Text(
                           n.protocol.toUpperCase(),
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
+                          style: TextStyle(
+                            color: context.appPalette.textSecondary,
                             fontSize: 13,
                           ),
                         ),
@@ -244,9 +244,9 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
+                color: context.appPalette.textSecondary,
               ),
             ],
           ),
@@ -257,17 +257,17 @@ class _NodePickerSheetState extends State<NodePickerSheet> {
 
   Widget _latencyPill(ServerNode n) {
     if (!_tested.contains(n)) {
-      return _pill(_testing ? '测速中' : '未测速', AppColors.textSecondary);
+      return _pill(_testing ? '测速中' : '未测速', context.appPalette.textSecondary);
     }
     final ms = n.latency;
     if (ms == null) {
       return _isUdp(n)
-          ? _pill('UDP·未响应', AppColors.textSecondary)
-          : _pill('超时', AppColors.danger);
+          ? _pill('UDP·未响应', context.appPalette.textSecondary)
+          : _pill('超时', context.appPalette.danger);
     }
     final c = ms < 200
-        ? AppColors.success
-        : (ms < 500 ? AppColors.warning : AppColors.danger);
+        ? context.appPalette.success
+        : (ms < 500 ? context.appPalette.warning : context.appPalette.danger);
     return _pill('${ms}ms', c);
   }
 

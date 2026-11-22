@@ -197,6 +197,8 @@ class _NodeListPanelState extends State<NodeListPanel>
   }
 
   Widget _buildNodeList(BuildContext context) {
+    final isLightTheme = Theme.of(context).brightness == Brightness.light;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(24, 8, 24, 16),
       constraints: const BoxConstraints(maxHeight: 280),
@@ -209,9 +211,11 @@ class _NodeListPanelState extends State<NodeListPanel>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(
+              alpha: isLightTheme ? 0.1575 : 0.15,
+            ),
+            blurRadius: isLightTheme ? 4.9 : 10,
+            offset: isLightTheme ? const Offset(0, 2.1) : const Offset(0, 4),
           ),
         ],
       ),
@@ -328,9 +332,8 @@ class _NodeListPanelState extends State<NodeListPanel>
                 child: Text(
                   country,
                   style: TextStyle(
-                    color: isSelected
-                        ? AppColors.accent
-                        : AppColors.textPrimary,
+                    color:
+                        isSelected ? AppColors.accent : AppColors.textPrimary,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     fontSize: 14,
                   ),

@@ -9,7 +9,7 @@ class PrivacyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.appPalette.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -23,15 +23,15 @@ class PrivacyScreen extends StatelessWidget {
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                          icon: Icon(Icons.arrow_back, color: context.appPalette.textPrimary),
                           onPressed: () => Navigator.pop(context),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Center(
                             child: Text(
                               '隐私政策',
                               style: TextStyle(
-                                color: AppColors.textPrimary,
+                                color: context.appPalette.textPrimary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -46,7 +46,7 @@ class PrivacyScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           _SectionTitle('1. 我们收集的信息'),
                           _SectionText(
                             '为了提供 VPN 连接服务，我们需要收集极少量的必要信息：\n'
@@ -108,8 +108,8 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
+      style: TextStyle(
+        color: context.appPalette.textPrimary,
         fontSize: 16,
         fontWeight: FontWeight.bold,
       ),
@@ -127,8 +127,8 @@ class _SectionText extends StatelessWidget {
       padding: const EdgeInsets.only(top: 8),
       child: Text(
         text,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
+        style: TextStyle(
+          color: context.appPalette.textSecondary,
           fontSize: 14,
           height: 1.6,
         ),

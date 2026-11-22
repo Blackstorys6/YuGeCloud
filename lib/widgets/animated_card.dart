@@ -10,6 +10,7 @@ class AnimatedCard extends StatefulWidget {
   final double? height;
   final bool enableHover;
   final bool enableBreathing;
+  final bool useSolidBackground;
   final double shadowIntensity;
   final Duration animationDuration;
 
@@ -22,6 +23,7 @@ class AnimatedCard extends StatefulWidget {
     this.height,
     this.enableHover = true,
     this.enableBreathing = true,
+    this.useSolidBackground = false,
     this.shadowIntensity = 1.0,
     this.animationDuration = const Duration(milliseconds: 300),
   });
@@ -101,6 +103,9 @@ class _AnimatedCardState extends State<AnimatedCard>
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
+    final shadowIntensity = Theme.of(context).brightness == Brightness.light
+        ? 0.35
+        : widget.shadowIntensity;
 
     return GestureDetector(
       onTapDown: widget.onTap != null ? _handleTapDown : null,
@@ -125,18 +130,21 @@ class _AnimatedCardState extends State<AnimatedCard>
               height: widget.height,
               padding: widget.padding,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    palette.surface,
-                    Color.lerp(
-                      palette.surface,
-                      palette.surfaceAlt,
-                      breathValue * 0.35,
-                    )!,
-                  ],
-                ),
+                color: widget.useSolidBackground ? palette.surface : null,
+                gradient: widget.useSolidBackground
+                    ? null
+                    : LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          palette.surface,
+                          Color.lerp(
+                            palette.surface,
+                            palette.surfaceAlt,
+                            breathValue * 0.35,
+                          )!,
+                        ],
+                      ),
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
                   color:
@@ -154,9 +162,9 @@ class _AnimatedCardState extends State<AnimatedCard>
                   ),
                   BoxShadow(
                     color: palette.shadow
-                        .withValues(alpha: 0.45 * widget.shadowIntensity),
-                    blurRadius: 14 * widget.shadowIntensity,
-                    offset: Offset(0, 6 * widget.shadowIntensity),
+                        .withValues(alpha: 0.45 * shadowIntensity),
+                    blurRadius: 14 * shadowIntensity,
+                    offset: Offset(0, 6 * shadowIntensity),
                   ),
                   if (_isHovered)
                     BoxShadow(

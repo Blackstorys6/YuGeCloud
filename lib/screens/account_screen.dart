@@ -217,49 +217,6 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           children: [
             SectionHeader(
-              title: AppLocalizations.of(context)?.connected ??
-                  'Connection Status',
-            ),
-            SizedBox(height: 12),
-            AnimatedCard(
-              shadowIntensity: 0.35,
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // ... (Status dot logic - keep existing or simple)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: widget.connectionState == 'connected'
-                          ? palette.success
-                          : widget.connectionState == 'connecting'
-                              ? palette.accent
-                              : widget.connectionState == 'error'
-                                  ? palette.danger
-                                  : palette.textSecondary,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        if (widget.connectionState == 'connected')
-                          BoxShadow(
-                            color: palette.success.withValues(alpha: 0.4),
-                            blurRadius: 8,
-                          ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    widget.connectionStatus,
-                    style: TextStyle(color: palette.textPrimary),
-                  ),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 16),
-            SectionHeader(
               title:
                   AppLocalizations.of(context)?.subscription ?? 'Subscription',
             ),
@@ -378,9 +335,7 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ),
 
-            SizedBox(height: 16),
-
-            SizedBox(height: 16),
+            SizedBox(height: 24),
             SectionHeader(
               title: AppLocalizations.of(context)?.basicInfo ?? 'Basic Info',
             ),
@@ -408,150 +363,138 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ),
 
-            // 01 账户与安全
-            SectionHeader(title: '账户与安全'),
+            SizedBox(height: 24),
+            SectionHeader(title: '设置分类'),
             SizedBox(height: 12),
-            AnimatedCard(
-              shadowIntensity: 0.35,
-              padding: const EdgeInsets.all(16),
-              child: _buildLinkRow(
-                context,
-                Icons.lock_outline_rounded,
-                '修改账号密码',
-                _showChangePasswordDialog,
-              ),
-            ),
 
-            SizedBox(height: 20),
-
-            // 02 个性化设置
-            SectionHeader(title: '个性化设置'),
-            SizedBox(height: 12),
-            AnimatedCard(
-              shadowIntensity: 0.35,
-              padding: const EdgeInsets.all(16),
-              child: _buildLinkRow(
-                context,
-                Icons.palette_outlined,
-                '外观设置',
-                () => Navigator.push(
+            _buildCategoryCard(
+              Icons.security_rounded,
+              '账号与安全',
+              '密码修改与账户保护',
+              () => _openCategory('账号与安全', [
+                _buildLinkRow(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const AppearanceScreen(),
+                  Icons.lock_outline_rounded,
+                  '修改账号密码',
+                  _showChangePasswordDialog,
+                ),
+              ]),
+            ),
+            SizedBox(height: 12),
+
+            _buildCategoryCard(
+              Icons.palette_outlined,
+              '个性化设置',
+              '外观与主题',
+              () => _openCategory('个性化设置', [
+                _buildLinkRow(
+                  context,
+                  Icons.palette_outlined,
+                  '外观设置',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AppearanceScreen(),
+                    ),
                   ),
                 ),
-              ),
+              ]),
             ),
-
-            SizedBox(height: 20),
-
-            // 03 订单与权益
-            SectionHeader(title: '订单与权益'),
             SizedBox(height: 12),
-            AnimatedCard(
-              shadowIntensity: 0.35,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildLinkRow(
+
+            _buildCategoryCard(
+              Icons.card_giftcard_rounded,
+              '订单与权益',
+              '订单记录与邀请奖励',
+              () => _openCategory('订单与权益', [
+                _buildLinkRow(
+                  context,
+                  Icons.receipt_long_outlined,
+                  '我的订单',
+                  () => Navigator.push(
                     context,
-                    Icons.receipt_long_outlined,
-                    '我的订单',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const MyOrdersScreen(),
-                      ),
+                    MaterialPageRoute(
+                      builder: (_) => const MyOrdersScreen(),
                     ),
                   ),
-                  Divider(height: 24, color: palette.border),
-                  _buildLinkRow(
+                ),
+                Divider(height: 24, color: palette.border),
+                _buildLinkRow(
+                  context,
+                  Icons.card_giftcard_rounded,
+                  '邀请有礼',
+                  () => Navigator.push(
                     context,
-                    Icons.card_giftcard_rounded,
-                    '邀请有礼',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const InviteScreen(),
-                      ),
+                    MaterialPageRoute(
+                      builder: (_) => const InviteScreen(),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ]),
             ),
-
-            SizedBox(height: 20),
-
-            // 04 帮助与服务
-            SectionHeader(title: '帮助与服务'),
             SizedBox(height: 12),
-            AnimatedCard(
-              shadowIntensity: 0.35,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildLinkRow(
-                    context,
-                    Icons.support_agent,
-                    AppLocalizations.of(context)?.customerService ??
-                        'Customer Service',
-                    _showCustomerServiceDialog,
-                  ),
-                  Divider(height: 24, color: palette.border),
-                  _buildLinkRow(
-                    context,
-                    Icons.language_rounded,
-                    '官方网站',
-                    _openOfficialWebsite,
-                  ),
-                ],
-              ),
+
+            _buildCategoryCard(
+              Icons.support_agent_rounded,
+              '帮助与服务',
+              '联系客服与访问官方网站',
+              () => _openCategory('帮助与服务', [
+                _buildLinkRow(
+                  context,
+                  Icons.support_agent,
+                  AppLocalizations.of(context)?.customerService ??
+                      'Customer Service',
+                  _showCustomerServiceDialog,
+                ),
+                Divider(height: 24, color: palette.border),
+                _buildLinkRow(
+                  context,
+                  Icons.language_rounded,
+                  '官方网站',
+                  _openOfficialWebsite,
+                ),
+              ]),
             ),
-
-            SizedBox(height: 20),
-
-            // 05 关于与法律
-            SectionHeader(title: '关于与法律'),
             SizedBox(height: 12),
-            AnimatedCard(
-              shadowIntensity: 0.35,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildLinkRow(
+
+            _buildCategoryCard(
+              Icons.info_outline_rounded,
+              '关于与法律',
+              '服务条款、隐私政策与应用信息',
+              () => _openCategory('关于与法律', [
+                _buildLinkRow(
+                  context,
+                  Icons.description_outlined,
+                  AppLocalizations.of(context)?.termsOfService ??
+                      'Terms of Service',
+                  () => Navigator.push(
                     context,
-                    Icons.description_outlined,
-                    AppLocalizations.of(context)?.termsOfService ??
-                        'Terms of Service',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const TosScreen(),
-                      ),
+                    MaterialPageRoute(
+                      builder: (_) => const TosScreen(),
                     ),
                   ),
-                  Divider(height: 24, color: palette.border),
-                  _buildLinkRow(
+                ),
+                Divider(height: 24, color: palette.border),
+                _buildLinkRow(
+                  context,
+                  Icons.privacy_tip_outlined,
+                  AppLocalizations.of(context)?.privacyPolicy ??
+                      'Privacy Policy',
+                  () => Navigator.push(
                     context,
-                    Icons.privacy_tip_outlined,
-                    AppLocalizations.of(context)?.privacyPolicy ??
-                        'Privacy Policy',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const PrivacyScreen(),
-                      ),
+                    MaterialPageRoute(
+                      builder: (_) => const PrivacyScreen(),
                     ),
                   ),
-                  Divider(height: 24, color: palette.border),
-                  _buildLinkRow(
-                    context,
-                    Icons.info_outline,
-                    AppLocalizations.of(context)?.about ?? 'About 屿哥云',
-                    () => _showAboutDialog(context),
-                  ),
-                ],
-              ),
+                ),
+                Divider(height: 24, color: palette.border),
+                _buildLinkRow(
+                  context,
+                  Icons.info_outline,
+                  AppLocalizations.of(context)?.about ?? 'About 屿哥云',
+                  () => _showAboutDialog(context),
+                ),
+              ]),
             ),
 
             SizedBox(height: 24),
@@ -588,6 +531,75 @@ class _AccountScreenState extends State<AccountScreen> {
           ],
         );
       },
+    );
+  }
+
+  void _openCategory(String title, List<Widget> children) {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => AccountCategoryScreen(
+          title: title,
+          children: children,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
+    final palette = context.appPalette;
+
+    return AnimatedCard(
+      shadowIntensity: 0.35,
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: palette.accent.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(icon, color: palette.accent, size: 21),
+          ),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: palette.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: palette.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: palette.textSecondary,
+            size: 22,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1060,6 +1072,51 @@ class _AccountScreenState extends State<AccountScreen> {
           ],
         ),
       ],
+    );
+  }
+}
+
+class AccountCategoryScreen extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const AccountCategoryScreen({
+    super.key,
+    required this.title,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.appPalette;
+
+    return Scaffold(
+      backgroundColor: palette.background,
+      appBar: AppBar(
+        title: Text(
+          title,
+          style: TextStyle(
+            color: palette.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: palette.background,
+        foregroundColor: palette.textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        children: [
+          AnimatedCard(
+            shadowIntensity: 0.35,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: children,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

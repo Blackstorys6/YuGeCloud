@@ -183,10 +183,10 @@ class _InviteScreenState extends State<InviteScreen>
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               decoration: BoxDecoration(
                 // Dark Metallic Gradient
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [
-                    Color(0xFF2B2E36), // Lighter metallic
-                    Color(0xFF15171C), // Deep dark
+                    context.appPalette.surfaceAlt,
+                    context.appPalette.surface,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -234,7 +234,7 @@ class _InviteScreenState extends State<InviteScreen>
                             AppLocalizations.of(context)?.availableCommission ??
                                 'Available Commission',
                             style: TextStyle(
-                              color: context.appPalette.accent.withOpacity(0.8),
+                              color: context.appPalette.textSecondary,
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
@@ -249,13 +249,6 @@ class _InviteScreenState extends State<InviteScreen>
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -0.5,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black,
-                              blurRadius: 10,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
                         ),
                       ),
                     ],
@@ -345,7 +338,7 @@ class _InviteScreenState extends State<InviteScreen>
         Text(
           label,
           style: TextStyle(
-            color: context.appPalette.accent.withOpacity(0.5),
+            color: context.appPalette.textSecondary,
             fontSize: 11,
           ),
         ),
@@ -388,7 +381,7 @@ class _InviteScreenState extends State<InviteScreen>
             Text(
               label,
               style: TextStyle(
-                color: context.appPalette.accent.withOpacity(0.4),
+                color: context.appPalette.textSecondary,
                 fontSize: 11,
               ),
             ),
@@ -485,10 +478,10 @@ class _InviteScreenState extends State<InviteScreen>
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
               // Silver Gradient
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [
-                  Color(0xFFE5E6EB), // Bright Silver
-                  Color(0xFF9CA3AF), // Metallic Grey
+                  context.appPalette.accent,
+                  context.appPalette.accentWarm,
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,

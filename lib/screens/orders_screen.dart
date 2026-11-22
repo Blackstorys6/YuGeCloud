@@ -9,7 +9,7 @@ import '../models/user_info.dart';
 import '../services/v2board_api.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glow_button.dart';
-import '../widgets/gradient_card.dart';
+import '../widgets/animated_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/flux_loader.dart';
 
@@ -518,7 +518,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 FutureBuilder<UserInfo>(
                   future: _balanceFuture,
                   builder: (context, snapshot) {
-                    return GradientCard(
+                    return AnimatedCard(
+                      padding: const EdgeInsets.all(18),
+                      enableBreathing: false,
+                      useSolidBackground: true,
+                      shadowIntensity: 0.35,
                       child: Row(
                         children: [
                           Icon(
@@ -563,7 +567,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 const SizedBox(height: 12),
                 if (widget.selectedPlan == null) ...[
-                  GradientCard(
+                  AnimatedCard(
+                    padding: const EdgeInsets.all(18),
+                    enableBreathing: false,
+                    useSolidBackground: true,
+                    shadowIntensity: 0.35,
                     child: Row(
                       children: [
                         Icon(Icons.layers, color: context.appPalette.accent),
@@ -586,7 +594,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                GradientCard(
+                AnimatedCard(
+                  padding: const EdgeInsets.all(18),
+                  enableBreathing: false,
+                  useSolidBackground: true,
+                  shadowIntensity: 0.35,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -659,7 +671,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 if (_lastCreatedTradeNo != null) ...[
                   const SizedBox(height: 12),
-                  GradientCard(
+                  AnimatedCard(
+                    padding: const EdgeInsets.all(18),
+                    enableBreathing: false,
+                    useSolidBackground: true,
+                    shadowIntensity: 0.35,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

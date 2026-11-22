@@ -6,7 +6,7 @@ import '../theme/app_colors.dart';
 /// 流体光晕启动动画 - 与原生 SplashActivity 效果一致
 class FluxSplash extends StatefulWidget {
   final VoidCallback? onReady;
-  
+
   const FluxSplash({super.key, this.onReady});
 
   @override
@@ -17,53 +17,53 @@ class _FluxSplashState extends State<FluxSplash> with TickerProviderStateMixin {
   late final AnimationController _fluidController;
   late final AnimationController _logoController;
   late final AnimationController _shimmerController;
-  
+
   late final Animation<double> _logoFade;
   late final Animation<double> _logoScale;
 
   @override
   void initState() {
     super.initState();
-    
+
     // 流体光晕动画（无限循环）
     _fluidController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 4000),
     )..repeat();
-    
+
     // Logo 入场动画
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    
+
     _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _logoController,
         curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
       ),
     );
-    
+
     _logoScale = Tween<double>(begin: 0.95, end: 1.0).animate(
       CurvedAnimation(
         parent: _logoController,
         curve: const Interval(0.0, 1.0, curve: Curves.easeOut),
       ),
     );
-    
+
     // 流光效果（延迟后循环）
     _shimmerController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
-    
+
     // 启动动画序列
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
         _logoController.forward();
       }
     });
-    
+
     Future.delayed(const Duration(milliseconds: 1000), () {
       if (mounted) {
         _shimmerController.repeat();
@@ -81,15 +81,19 @@ class _FluxSplashState extends State<FluxSplash> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.black,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.black,
-        systemNavigationBarIconBrightness: Brightness.light,
+        statusBarColor: palette.background,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: palette.background,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: palette.background,
         body: Stack(
           children: [
             // 流体光晕层
@@ -98,7 +102,7 @@ class _FluxSplashState extends State<FluxSplash> with TickerProviderStateMixin {
               builder: (context, child) {
                 final t = _fluidController.value;
                 final time = t * math.pi * 4;
-                
+
                 return Stack(
                   children: [
                     // 光晕1
@@ -132,7 +136,7 @@ class _FluxSplashState extends State<FluxSplash> with TickerProviderStateMixin {
                 );
               },
             ),
-            
+
             // Logo
             Center(
               child: AnimatedBuilder(
@@ -178,7 +182,9 @@ class _FluxSplashState extends State<FluxSplash> with TickerProviderStateMixin {
                                   ).createShader(bounds);
                                 },
                                 child: Opacity(
-                                  opacity: 0.7 * math.sin(_shimmerController.value * math.pi),
+                                  opacity: 0.7 *
+                                      math.sin(
+                                          _shimmerController.value * math.pi),
                                   child: const Text(
                                     '屿哥云',
                                     style: TextStyle(
@@ -205,7 +211,7 @@ class _FluxSplashState extends State<FluxSplash> with TickerProviderStateMixin {
       ),
     );
   }
-  
+
   Widget _buildGlow({
     required double size,
     required double opacity,

@@ -19,6 +19,7 @@ class GradientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
+    final isLightTheme = Theme.of(context).brightness == Brightness.light;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
@@ -34,9 +35,12 @@ class GradientCard extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: palette.shadow.withValues(alpha: 0.65),
-                blurRadius: 18,
-                offset: const Offset(0, 7),
+                color: palette.shadow.withValues(
+                  alpha: isLightTheme ? 0.1575 : 0.65,
+                ),
+                blurRadius: isLightTheme ? 4.9 : 18,
+                offset:
+                    isLightTheme ? const Offset(0, 2.1) : const Offset(0, 7),
               ),
             ],
           ),
