@@ -24,23 +24,31 @@ class GradientCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(
+          sigmaX: isLightTheme ? 18 : 20,
+          sigmaY: isLightTheme ? 18 : 20,
+        ),
         child: Container(
           decoration: BoxDecoration(
-            color: palette.surface.withValues(alpha: 0.92),
+            color: palette.surface.withValues(
+              alpha: isLightTheme ? 0.76 : 0.78,
+            ),
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
-              color: palette.border.withValues(alpha: 0.85),
+              color: palette.border.withValues(
+                alpha: isLightTheme ? 0.78 : 0.72,
+              ),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
                 color: palette.shadow.withValues(
-                  alpha: isLightTheme ? 0.1575 : 0.65,
+                  alpha: isLightTheme ? 0.22 : 0.52,
                 ),
-                blurRadius: isLightTheme ? 4.9 : 18,
-                offset:
-                    isLightTheme ? const Offset(0, 2.1) : const Offset(0, 7),
+                blurRadius: isLightTheme ? 18 : 26,
+                offset: isLightTheme
+                    ? const Offset(0, 7)
+                    : const Offset(0, 10),
               ),
             ],
           ),
@@ -49,9 +57,15 @@ class GradientCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(borderRadius),
               gradient: LinearGradient(
                 colors: [
-                  palette.glassOverlay.withValues(alpha: 0.42),
+                  palette.glassOverlay.withValues(
+                    alpha: isLightTheme ? 0.58 : 0.48,
+                  ),
+                  palette.glassOverlay.withValues(
+                    alpha: isLightTheme ? 0.10 : 0.04,
+                  ),
                   Colors.transparent,
                 ],
+                stops: const [0.0, 0.38, 1.0],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
