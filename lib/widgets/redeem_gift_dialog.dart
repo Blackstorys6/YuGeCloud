@@ -13,7 +13,8 @@ class RedeemGiftDialog extends StatefulWidget {
   State<RedeemGiftDialog> createState() => _RedeemGiftDialogState();
 }
 
-class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerProviderStateMixin {
+class _RedeemGiftDialogState extends State<RedeemGiftDialog>
+    with SingleTickerProviderStateMixin {
   final _controller = TextEditingController();
   late AnimationController _animController;
   late Animation<double> _breatheAnim;
@@ -27,7 +28,7 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    
+
     _breatheAnim = Tween<double>(begin: 0.2, end: 0.6).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
     );
@@ -56,22 +57,25 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
       if (success) {
         // Refresh user info
         await api.getUserInfo();
-        
+
         if (mounted) {
           widget.onSuccess();
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)?.redeemSuccess ?? 'Redeem success'),
-              backgroundColor: AppColors.success,
+              content: Text(AppLocalizations.of(context)?.redeemSuccess ??
+                  'Redeem success'),
+              backgroundColor: context.appPalette.success,
             ),
           );
         }
       } else {
-        setState(() => _errorText = AppLocalizations.of(context)?.invalidCode ?? 'Invalid code');
+        setState(() => _errorText =
+            AppLocalizations.of(context)?.invalidCode ?? 'Invalid code');
       }
     } catch (e) {
-       setState(() => _errorText = '${AppLocalizations.of(context)?.redeemFailed ?? "Redeem failed"}: ${e.toString().replaceAll("Exception:", "")}');
+      setState(() => _errorText =
+          '${AppLocalizations.of(context)?.redeemFailed ?? "Redeem failed"}: ${e.toString().replaceAll("Exception:", "")}');
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -81,6 +85,7 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.appPalette;
     return Center(
       child: Material(
         color: Colors.transparent,
@@ -91,21 +96,22 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
               width: 340,
               margin: const EdgeInsets.symmetric(horizontal: 24),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E222B).withValues(alpha: 0.95), // Darker surface
+                color: palette.surface,
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                  color: AppColors.accent.withValues(alpha: 0.15),
+                  color: palette.border,
                   width: 1.2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 40,
-                    offset: const Offset(0, 20),
+                    color: palette.shadow,
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
                   ),
                   // Breathing Glow
                   BoxShadow(
-                    color: AppColors.accent.withValues(alpha: _breatheAnim.value * 0.3),
+                    color: palette.accent
+                        .withValues(alpha: _breatheAnim.value * 0.22),
                     blurRadius: 20 + (_breatheAnim.value * 10),
                     spreadRadius: -5 + (_breatheAnim.value * 5),
                   ),
@@ -129,41 +135,45 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
                       builder: (context, _) => Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.accent.withValues(alpha: 0.1 + (_breatheAnim.value * 0.05)),
+                          color: palette.accent.withValues(
+                              alpha: 0.10 + (_breatheAnim.value * 0.05)),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.accent.withValues(alpha: _breatheAnim.value * 0.2),
+                              color: palette.accent
+                                  .withValues(alpha: _breatheAnim.value * 0.16),
                               blurRadius: 16,
                               spreadRadius: 2,
                             )
                           ],
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.card_giftcard_rounded,
-                          color: AppColors.accent,
+                          color: palette.accent,
                           size: 32,
                         ),
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // Title
                     Text(
-                      AppLocalizations.of(context)?.redeemGiftCard ?? 'Redeem Gift Card',
-                      style: const TextStyle(
+                      AppLocalizations.of(context)?.redeemGiftCard ??
+                          'Redeem Gift Card',
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: palette.textPrimary,
                         letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      AppLocalizations.of(context)?.enterCode ?? 'Enter your code',
+                      AppLocalizations.of(context)?.enterCode ??
+                          'Enter your code',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: palette.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -171,21 +181,22 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
                     // Input Field
                     TextField(
                       controller: _controller,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: palette.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
-                      cursorColor: AppColors.accent,
+                      cursorColor: palette.accent,
                       decoration: InputDecoration(
                         hintText: 'ABCD-1234-EFGH-5678',
                         hintStyle: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: palette.textSecondary.withValues(alpha: 0.65),
                           fontSize: 15,
                         ),
                         filled: true,
-                        fillColor: Colors.black.withValues(alpha: 0.3),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                        fillColor: palette.surfaceAlt,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 18),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -193,18 +204,18 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.05),
+                            color: palette.border,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: AppColors.accent.withValues(alpha: 0.5),
+                            color: palette.accent,
                           ),
                         ),
                         errorText: _errorText,
                         errorMaxLines: 5,
-                        errorStyle: const TextStyle(color: AppColors.danger),
+                        errorStyle: TextStyle(color: palette.danger),
                       ),
                     ),
                     const SizedBox(height: 28),
@@ -220,9 +231,10 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              foregroundColor: Colors.white.withValues(alpha: 0.6),
+                              foregroundColor: palette.textSecondary,
                             ),
-                            child: Text(AppLocalizations.of(context)?.cancel ?? 'Cancel'),
+                            child: Text(AppLocalizations.of(context)?.cancel ??
+                                'Cancel'),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -231,17 +243,10 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
                               // SILVER GRADIENT Black & Silver Theme
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFFE5E6EB), // Bright Silver / White-ish
-                                  Color(0xFF9CA3AF), // Metallic Grey
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              color: palette.accent,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.white.withValues(alpha: 0.15),
+                                  color: palette.accent.withValues(alpha: 0.20),
                                   blurRadius: 16,
                                   offset: const Offset(0, 4),
                                 ),
@@ -250,26 +255,31 @@ class _RedeemGiftDialogState extends State<RedeemGiftDialog> with SingleTickerPr
                             child: ElevatedButton(
                               onPressed: _isSubmitting ? null : _submit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
+                                backgroundColor: palette.accent,
+                                foregroundColor: palette.background,
+                                disabledBackgroundColor:
+                                    palette.accent.withValues(alpha: 0.5),
                                 shadowColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
                               child: _isSubmitting
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.black, // Dark loader on silver
+                                        color: palette.background,
                                       ),
                                     )
                                   : Text(
-                                      AppLocalizations.of(context)?.redeemNow ?? 'Redeem Now',
+                                      AppLocalizations.of(context)?.redeemNow ??
+                                          'Redeem Now',
                                       style: TextStyle(
-                                        color: Colors.black, // BLACK TEXT for Silver button
+                                        color: palette.background,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15,
                                       ),

@@ -257,23 +257,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.appPalette.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           AppLocalizations.of(context)?.unpaidOrder ?? 'Unpaid Order',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+          style: TextStyle(color: context.appPalette.textPrimary, fontSize: 18),
         ),
         content: Text(
           AppLocalizations.of(context)?.unpaidOrderMessage ??
               'You have an unpaid order. Please continue to pay or cancel.',
-          style: TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: context.appPalette.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, 'cancel'),
             child: Text(
               AppLocalizations.of(context)?.cancelOrder ?? 'Cancel Order',
-              style: TextStyle(color: Colors.red.shade400),
+              style: TextStyle(color: context.appPalette.danger),
             ),
           ),
           TextButton(
@@ -281,7 +281,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             child: Text(
               AppLocalizations.of(context)?.continuePayment ??
                   'Continue Payment',
-              style: TextStyle(color: AppColors.accent),
+              style: TextStyle(color: context.appPalette.accent),
             ),
           ),
         ],
@@ -398,7 +398,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
         final checkRes = await _api.checkOrder(tradeNo);
         // API 返回: {"data":1} 表示已支付/开通成功; {"data":0} 表示未支付
         final status = checkRes['data'];
-        print('Order check status: $status (${status.runtimeType})');
 
         if (status == 1 ||
             status == true ||
@@ -459,7 +458,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.appPalette;
     final methodsFuture = _methodsFuture ??= _loadMethods().then((methods) {
       if (mounted) {}
       return methods;
@@ -469,7 +467,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         title: Text(AppLocalizations.of(context)?.payment ?? 'Payment'),
       ),
       body: DecoratedBox(
-        decoration: BoxDecoration(color: AppColors.background),
+        decoration: BoxDecoration(color: context.appPalette.background),
         child: FutureBuilder<List<PaymentMethod>>(
           future: methodsFuture,
           builder: (context, snapshot) {
@@ -485,7 +483,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   children: [
                     Text(
                       message,
-                      style: TextStyle(color: AppColors.danger),
+                      style: TextStyle(color: context.appPalette.danger),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
@@ -525,7 +523,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         children: [
                           Icon(
                             Icons.account_balance_wallet_outlined,
-                            color: AppColors.accent,
+                            color: context.appPalette.accent,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -535,7 +533,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 Text(
                                   '账户余额',
                                   style: TextStyle(
-                                    color: AppColors.textSecondary,
+                                    color: context.appPalette.textSecondary,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -568,13 +566,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   GradientCard(
                     child: Row(
                       children: [
-                        Icon(Icons.layers, color: AppColors.accent),
+                        Icon(Icons.layers, color: context.appPalette.accent),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             AppLocalizations.of(context)?.selectPlanPrompt ??
                                 'Select a plan first',
-                            style: TextStyle(color: AppColors.textPrimary),
+                            style: TextStyle(
+                                color: context.appPalette.textPrimary),
                           ),
                         ),
                         TextButton(
@@ -667,7 +666,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         Text(
                           '订单已创建',
                           style: TextStyle(
-                            color: AppColors.textPrimary,
+                            color: context.appPalette.textPrimary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -675,7 +674,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         SelectableText(
                           '订单号：$_lastCreatedTradeNo',
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: context.appPalette.textSecondary,
                             fontSize: 12,
                           ),
                         ),
@@ -686,7 +685,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             Text(
                               '订单应付金额',
                               style: TextStyle(
-                                color: AppColors.textSecondary,
+                                color: context.appPalette.textSecondary,
                               ),
                             ),
                             Text(
@@ -694,7 +693,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   ? '暂时无法获取'
                                   : '¥${Formatters.formatCurrency(_lastCreatedAmount!)}',
                               style: TextStyle(
-                                color: AppColors.accent,
+                                color: context.appPalette.accent,
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -705,7 +704,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         Text(
                           '金额以服务器订单详情为准；可在「我的订单」中查看和继续支付。',
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: context.appPalette.textSecondary,
                             fontSize: 11,
                           ),
                         ),
@@ -732,13 +731,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             color: selected
-                                ? AppColors.surfaceAlt
-                                : AppColors.surface,
+                                ? context.appPalette.surfaceAlt
+                                : context.appPalette.surface,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: selected
-                                  ? AppColors.accent
-                                  : AppColors.border,
+                                  ? context.appPalette.accent
+                                  : context.appPalette.border,
                             ),
                           ),
                           child: Text(method.name),
@@ -753,7 +752,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       AppLocalizations.of(context)?.noPaymentMethods ??
                           'No payment methods available',
                       style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
+                          color: context.appPalette.textSecondary,
+                          fontSize: 13),
                     ),
                   ),
                 ],
@@ -762,7 +762,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   Center(
                     child: Text(
                       _message!,
-                      style: TextStyle(color: AppColors.danger),
+                      style: TextStyle(color: context.appPalette.danger),
                       textAlign: TextAlign.center,
                     ),
                   ),

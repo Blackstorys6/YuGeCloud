@@ -208,6 +208,7 @@ class _AccountScreenState extends State<AccountScreen> {
         final percent = (used / total).clamp(0.0, 1.0);
 
         return StaggeredList(
+          eagerBuild: true,
           padding: const EdgeInsets.only(
             top: 64,
             left: 16,
@@ -221,6 +222,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
             SizedBox(height: 12),
             AnimatedCard(
+              shadowIntensity: 0.35,
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
@@ -263,6 +265,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
             SizedBox(height: 12),
             AnimatedCard(
+              shadowIntensity: 0.35,
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,6 +386,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
             SizedBox(height: 12),
             AnimatedCard(
+              shadowIntensity: 0.35,
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,56 +408,51 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ),
 
-            // 法律信息和关于
-            SizedBox(height: 24),
+            // 01 账户与安全
+            SectionHeader(title: '账户与安全'),
+            SizedBox(height: 12),
             AnimatedCard(
+              shadowIntensity: 0.35,
+              padding: const EdgeInsets.all(16),
+              child: _buildLinkRow(
+                context,
+                Icons.lock_outline_rounded,
+                '修改账号密码',
+                _showChangePasswordDialog,
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // 02 个性化设置
+            SectionHeader(title: '个性化设置'),
+            SizedBox(height: 12),
+            AnimatedCard(
+              shadowIntensity: 0.35,
+              padding: const EdgeInsets.all(16),
+              child: _buildLinkRow(
+                context,
+                Icons.palette_outlined,
+                '外观设置',
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AppearanceScreen(),
+                  ),
+                ),
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // 03 订单与权益
+            SectionHeader(title: '订单与权益'),
+            SizedBox(height: 12),
+            AnimatedCard(
+              shadowIntensity: 0.35,
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _buildLinkRow(
-                    context,
-                    Icons.support_agent,
-                    AppLocalizations.of(context)?.customerService ??
-                        'Customer Service',
-                    _showCustomerServiceDialog,
-                  ),
-                  Divider(height: 24, color: palette.border),
-                  _buildLinkRow(
-                    context,
-                    Icons.lock_outline_rounded,
-                    '修改账号密码',
-                    _showChangePasswordDialog,
-                  ),
-                  Divider(height: 24, color: palette.border),
-                  _buildLinkRow(
-                    context,
-                    Icons.palette_outlined,
-                    '外观设置',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AppearanceScreen(),
-                      ),
-                    ),
-                  ),
-                  Divider(height: 24, color: palette.border),
-                  _buildLinkRow(
-                    context,
-                    Icons.language_rounded,
-                    '官方网站',
-                    _openOfficialWebsite,
-                  ),
-                  Divider(height: 24, color: palette.border),
-                  _buildLinkRow(
-                    context,
-                    Icons.card_giftcard_rounded,
-                    '邀请有礼',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const InviteScreen()),
-                    ),
-                  ),
-                  Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
                     Icons.receipt_long_outlined,
@@ -468,12 +467,67 @@ class _AccountScreenState extends State<AccountScreen> {
                   Divider(height: 24, color: palette.border),
                   _buildLinkRow(
                     context,
+                    Icons.card_giftcard_rounded,
+                    '邀请有礼',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const InviteScreen(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // 04 帮助与服务
+            SectionHeader(title: '帮助与服务'),
+            SizedBox(height: 12),
+            AnimatedCard(
+              shadowIntensity: 0.35,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildLinkRow(
+                    context,
+                    Icons.support_agent,
+                    AppLocalizations.of(context)?.customerService ??
+                        'Customer Service',
+                    _showCustomerServiceDialog,
+                  ),
+                  Divider(height: 24, color: palette.border),
+                  _buildLinkRow(
+                    context,
+                    Icons.language_rounded,
+                    '官方网站',
+                    _openOfficialWebsite,
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // 05 关于与法律
+            SectionHeader(title: '关于与法律'),
+            SizedBox(height: 12),
+            AnimatedCard(
+              shadowIntensity: 0.35,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildLinkRow(
+                    context,
                     Icons.description_outlined,
                     AppLocalizations.of(context)?.termsOfService ??
                         'Terms of Service',
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const TosScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const TosScreen(),
+                      ),
                     ),
                   ),
                   Divider(height: 24, color: palette.border),
@@ -484,7 +538,9 @@ class _AccountScreenState extends State<AccountScreen> {
                         'Privacy Policy',
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacyScreen(),
+                      ),
                     ),
                   ),
                   Divider(height: 24, color: palette.border),
@@ -500,6 +556,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
             SizedBox(height: 24),
             AnimatedCard(
+              shadowIntensity: 0.35,
               onTap: _logout,
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -872,7 +929,7 @@ class _AccountScreenState extends State<AccountScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: palette.accent.withOpacity(0.7)),
+            Icon(icon, size: 20, color: palette.accent.withValues(alpha: 0.7)),
             SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -908,7 +965,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 child: Image.asset('assets/icons/app_icon.png',
                     width: 32, height: 32, fit: BoxFit.cover)),
             SizedBox(width: 12),
-            Text('屿哥云', style: TextStyle(color: Colors.white)),
+            Text('屿哥云', style: TextStyle(color: palette.textPrimary)),
           ],
         ),
         content: Column(
@@ -921,6 +978,8 @@ class _AccountScreenState extends State<AccountScreen> {
               style: TextStyle(
                 color: palette.textSecondary,
                 fontSize: 13,
+                height: 1.45,
+                letterSpacing: 0.1,
               ),
             ),
             SizedBox(height: 20),
@@ -970,7 +1029,7 @@ class _AccountScreenState extends State<AccountScreen> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: palette.accent.withOpacity(0.1),
+            color: palette.accent.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: palette.accent),
@@ -982,16 +1041,20 @@ class _AccountScreenState extends State<AccountScreen> {
             Text(
               title,
               style: TextStyle(
-                color: Colors.white,
+                color: palette.textPrimary,
                 fontSize: 14,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+                height: 1.25,
+                letterSpacing: 0.1,
               ),
             ),
             Text(
               subtitle,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-                fontSize: 11,
+                color: palette.textSecondary,
+                fontSize: 12,
+                height: 1.35,
+                letterSpacing: 0.1,
               ),
             ),
           ],

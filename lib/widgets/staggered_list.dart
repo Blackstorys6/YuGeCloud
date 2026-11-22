@@ -8,6 +8,7 @@ class StaggeredList extends StatelessWidget {
   final Duration animationDuration;
   final ScrollController? controller;
   final EdgeInsets? padding;
+  final bool eagerBuild;
 
   const StaggeredList({
     super.key,
@@ -16,10 +17,26 @@ class StaggeredList extends StatelessWidget {
     this.animationDuration = const Duration(milliseconds: 600),
     this.controller,
     this.padding,
+    this.eagerBuild = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (eagerBuild) {
+      return ListView(
+        controller: controller,
+        padding: padding,
+        children: [
+          for (var index = 0; index < children.length; index++)
+            FadeInWidget(
+              delay: Duration.zero,
+              duration: animationDuration,
+              child: children[index],
+            ),
+        ],
+      );
+    }
+
     return ListView.builder(
       controller: controller,
       padding: padding,
@@ -34,4 +51,3 @@ class StaggeredList extends StatelessWidget {
     );
   }
 }
-

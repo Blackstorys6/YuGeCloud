@@ -10,6 +10,7 @@ class AnimatedCard extends StatefulWidget {
   final double? height;
   final bool enableHover;
   final bool enableBreathing;
+  final double shadowIntensity;
   final Duration animationDuration;
 
   const AnimatedCard({
@@ -21,6 +22,7 @@ class AnimatedCard extends StatefulWidget {
     this.height,
     this.enableHover = true,
     this.enableBreathing = true,
+    this.shadowIntensity = 1.0,
     this.animationDuration = const Duration(milliseconds: 300),
   });
 
@@ -112,7 +114,8 @@ class _AnimatedCardState extends State<AnimatedCard>
         builder: (context, child) {
           final breathValue =
               widget.enableBreathing ? _breathingAnimation.value : 0.0;
-          final glowOpacity = 0.025 + (breathValue * 0.055);
+          final glowOpacity =
+              (0.025 + (breathValue * 0.055)) * widget.shadowIntensity;
           final borderOpacity = 0.35 + (breathValue * 0.25);
 
           return Transform.scale(
@@ -145,19 +148,22 @@ class _AnimatedCardState extends State<AnimatedCard>
                 boxShadow: [
                   BoxShadow(
                     color: palette.accent.withValues(alpha: glowOpacity),
-                    blurRadius: 18 + (breathValue * 8),
-                    spreadRadius: -2,
+                    blurRadius:
+                        (18 + (breathValue * 8)) * widget.shadowIntensity,
+                    spreadRadius: -2 * widget.shadowIntensity,
                   ),
                   BoxShadow(
-                    color: palette.shadow.withValues(alpha: 0.45),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
+                    color: palette.shadow
+                        .withValues(alpha: 0.45 * widget.shadowIntensity),
+                    blurRadius: 14 * widget.shadowIntensity,
+                    offset: Offset(0, 6 * widget.shadowIntensity),
                   ),
                   if (_isHovered)
                     BoxShadow(
-                      color: palette.accent.withValues(alpha: 0.12),
-                      blurRadius: 24,
-                      offset: const Offset(0, 7),
+                      color: palette.accent
+                          .withValues(alpha: 0.12 * widget.shadowIntensity),
+                      blurRadius: 24 * widget.shadowIntensity,
+                      offset: Offset(0, 7 * widget.shadowIntensity),
                     ),
                 ],
               ),
