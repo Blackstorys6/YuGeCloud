@@ -154,7 +154,7 @@ class _HomeDashboardState extends State<HomeDashboard>
             children: [
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(20, 36, 20, 8),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       return FittedBox(
@@ -167,7 +167,7 @@ class _HomeDashboardState extends State<HomeDashboard>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildUsageBar(),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 48),
                               _buildUsageText(),
                               const SizedBox(height: 14),
                               _buildExpiryRow(),
@@ -199,6 +199,7 @@ class _HomeDashboardState extends State<HomeDashboard>
     final color = avail < 0.1
         ? _homePalette(context).danger
         : _homePalette(context).accent;
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
     return Container(
       height: 56,
       clipBehavior: Clip.antiAlias,
@@ -210,7 +211,17 @@ class _HomeDashboardState extends State<HomeDashboard>
         children: [
           FractionallySizedBox(
             widthFactor: avail,
-            child: Container(color: color.withValues(alpha: 0.85)),
+            child: SizedBox.expand(
+              child: AnimatedBuilder(
+                animation: _glowController,
+                builder: (context, child) => CustomPaint(
+                  painter: _WaterProgressPainter(
+                    color: color,
+                    phase: reduceMotion ? 0.0 : _glowController.value,
+                  ),
+                ),
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -339,6 +350,7 @@ class _HomeDashboardState extends State<HomeDashboard>
       child: Column(
         children: [
           _entryRow(
+            verticalPadding: 17,
             icon: Icons.dns_rounded,
             title: '服务器',
             subtitle: widget.isConnecting
@@ -353,12 +365,13 @@ class _HomeDashboardState extends State<HomeDashboard>
             onTap: widget.onSelectNode,
           ),
           Divider(
-            height: 1,
+            height: 18,
             indent: 20,
             endIndent: 20,
             color: _homePalette(context).border,
           ),
           _entryRow(
+            verticalPadding: 17,
             icon: Icons.public_rounded,
             title: '代理模式',
             subtitle: mode,
@@ -370,6 +383,7 @@ class _HomeDashboardState extends State<HomeDashboard>
   }
 
   Widget _entryRow({
+    double verticalPadding = 14,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -378,7 +392,8 @@ class _HomeDashboardState extends State<HomeDashboard>
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding:
+            EdgeInsets.symmetric(horizontal: 20, vertical: verticalPadding),
         child: Row(
           children: [
             Icon(icon, color: _homePalette(context).accent, size: 30),
@@ -435,10 +450,13 @@ class _HomeDashboardState extends State<HomeDashboard>
                 backgroundColor: connected
                     ? _homePalette(context).surfaceAlt
                     : _homePalette(context).accent,
-                disabledBackgroundColor:
-                    _homePalette(context).accent.withValues(
-                          alpha: 0.5,
-                        ),
+                disabledBackgroundColor: Color.lerp(
+                  _homePalette(context).accent,
+                  Theme.of(context).brightness == Brightness.light
+                      ? _homePalette(context).textPrimary
+                      : Colors.black,
+                  0.24,
+                )!,
                 foregroundColor: Colors.white,
                 disabledForegroundColor: Colors.white70,
                 shape: const StadiumBorder(),
@@ -1184,4 +1202,91 @@ class _HomeDashboardState extends State<HomeDashboard>
       ),
     );
   }
+}
+
+class _WaterProgressPainter extends CustomPainter {
+  final Color color;
+  final double phase;
+
+  const _WaterProgressPainter({
+    required this.color,
+    required this.phase,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+
+    final rect = Offset.zero & size;
+    final base = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color.lerp(color, Colors.white, 0.16)!,
+          color,
+          Color.lerp(color, Colors.black, 0.10)!,
+        ],
+      ).createShader(rect);
+    canvas.drawRect(rect, base);
+
+    final angle = phase * math.pi * 2;
+    _wave(canvas, size, angle, 0.37, 0.055, 1.35,
+        Paint()..color = Colors.white.withValues(alpha: 0.17));
+    _wave(canvas, size, angle + math.pi * 0.85, 0.43, 0.040, 1.75,
+        Paint()..color = color.withValues(alpha: 0.22));
+
+    final highlight = Path();
+    for (double x = 0; x <= size.width; x += 4) {
+      final y = size.height * 0.37 +
+          math.sin(x / size.width * math.pi * 2 * 1.35 + angle) *
+              size.height *
+              0.055;
+      if (x == 0) {
+        highlight.moveTo(x, y);
+      } else {
+        highlight.lineTo(x, y);
+      }
+    }
+    canvas.drawPath(
+      highlight,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round
+        ..color = Colors.white.withValues(alpha: 0.24),
+    );
+  }
+
+  void _wave(
+    Canvas canvas,
+    Size size,
+    double phase,
+    double level,
+    double amplitude,
+    double frequency,
+    Paint paint,
+  ) {
+    final path = Path();
+    for (double x = 0; x <= size.width; x += 4) {
+      final y = size.height * level +
+          math.sin(x / size.width * math.pi * 2 * frequency + phase) *
+              size.height *
+              amplitude;
+      if (x == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _WaterProgressPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.phase != phase;
 }

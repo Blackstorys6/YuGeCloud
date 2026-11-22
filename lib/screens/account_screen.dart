@@ -186,7 +186,7 @@ class _AccountScreenState extends State<AccountScreen> {
           );
         }
         if (!snapshot.hasData) {
-          return Center(child: FluxLoader(showTips: true));
+          return Center(child: FluxLoader(showTips: false));
         }
         final user = snapshot.data!['user'] as UserInfo;
 
@@ -209,6 +209,8 @@ class _AccountScreenState extends State<AccountScreen> {
 
         return StaggeredList(
           eagerBuild: true,
+          staggerDelay: Duration.zero,
+          animationDuration: Duration.zero,
           padding: const EdgeInsets.only(
             top: 64,
             left: 16,
