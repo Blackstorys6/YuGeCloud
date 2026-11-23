@@ -70,6 +70,39 @@ class V2rayService {
     return startPort; // Fallback
   }
 
+  Future<bool> _waitForAndroidVpnConnected() async {
+    if (await isConnected()) return true;
+
+    final completer = Completer<bool>();
+    late final StreamSubscription<bool> subscription;
+
+    subscription = statusStream.listen(
+      (connected) {
+        if (connected && !completer.isCompleted) {
+          completer.complete(true);
+        }
+      },
+      onError: (_) {
+        if (!completer.isCompleted) completer.complete(false);
+      },
+      onDone: () {
+        if (!completer.isCompleted) completer.complete(false);
+      },
+    );
+
+    try {
+      // 二次查询用于覆盖“订阅建立前刚好收到连接成功事件”的竞态
+      if (await isConnected()) return true;
+
+      return await completer.future.timeout(
+        const Duration(seconds: 25),
+        onTimeout: () => false,
+      );
+    } finally {
+      await subscription.cancel();
+    }
+  }
+
   /// 连接到指定节点
   Future<bool> connect(ServerNode node) async {
     // 保存当前节点以便自动重连时使用
@@ -158,11 +191,26 @@ class V2rayService {
       }
 
       print('[V2rayService] Mobile Connecting. Mode: $_routingMode');
-      final result = await _channel.invokeMethod<bool>('connect', {
+      final started = await _channel.invokeMethod<bool>('connect', {
         'config': jsonEncode(fullConfig),
         'nodeName': node.name,
       });
-      return result ?? false;
+
+      if (started != true) return false;
+
+      // Android 原生 connect 返回只代表 Xray 已启动；
+      // 必须继续等待 VPN Service 确认 tun2socks 启动成功。
+      if (Platform.isAndroid) {
+        final connected = await _waitForAndroidVpnConnected();
+        if (!connected) {
+          try {
+            await _channel.invokeMethod<bool>('disconnect');
+          } catch (_) {}
+        }
+        return connected;
+      }
+
+      return true;
     } on PlatformException catch (_) {
       return false;
     }

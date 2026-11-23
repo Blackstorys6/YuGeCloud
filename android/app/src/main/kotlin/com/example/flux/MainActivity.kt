@@ -306,6 +306,28 @@ class MainActivity : FlutterActivity() {
             }
         }.start()
 
+        // 监控 Xray 核心意外退出，避免 VPN 状态长期停留在已连接
+        Thread {
+            try {
+                val exitCode = process.waitFor()
+                synchronized(vpnOperationLock) {
+                    if (xrayProcess === process &&
+                        isConnectionCurrent(generation)
+                    ) {
+                        Log.e(TAG, "Xray exited unexpectedly, code=$exitCode")
+                        pendingPermissionGeneration = -1L
+                        xrayProcess = null
+                        isV2rayRunning = false
+                        currentProtocol = ""
+                        FluxVpnService.nodeName = ""
+                        stopVpnService()
+                    }
+                }
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+        }.start()
+
         Thread.sleep(500)
 
         if (!isConnectionCurrent(generation)) {
@@ -372,8 +394,21 @@ class MainActivity : FlutterActivity() {
             val generation = pendingPermissionGeneration
             pendingPermissionGeneration = -1L
 
-            if (resultCode == RESULT_OK && generation >= 0L) {
-                startVpnServiceIfCurrent(generation)
+            if (generation >= 0L && isConnectionCurrent(generation)) {
+                if (resultCode == RESULT_OK) {
+                    startVpnServiceIfCurrent(generation)
+                } else {
+                    synchronized(vpnOperationLock) {
+                        if (isConnectionCurrent(generation)) {
+                            Log.w(TAG, "VPN permission denied")
+                            xrayProcess?.destroy()
+                            xrayProcess = null
+                            isV2rayRunning = false
+                            currentProtocol = ""
+                            FluxVpnService.nodeName = ""
+                        }
+                    }
+                }
             }
         }
     }
@@ -389,7 +424,12 @@ class MainActivity : FlutterActivity() {
                 }
                 startService(intent)
             } catch (e: Exception) {
-                Log.e(TAG, "Error starting VPN service: ${e.message}")
+                Log.e(TAG, "Error starting VPN service", e)
+                xrayProcess?.destroy()
+                xrayProcess = null
+                isV2rayRunning = false
+                currentProtocol = ""
+                FluxVpnService.nodeName = ""
             }
         }
     }
@@ -399,8 +439,8 @@ class MainActivity : FlutterActivity() {
             val intent = Intent(this, FluxVpnService::class.java).apply {
                 action = FluxVpnService.ACTION_STOP
             }
+            // 只发送停止指令，由 VPN Service 完成资源清理后自行 stopSelf()
             startService(intent)
-            stopService(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping VPN service: ${e.message}")
         }

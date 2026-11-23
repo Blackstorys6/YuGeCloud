@@ -15,7 +15,6 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -28,31 +27,36 @@ import java.io.File
  */
 class FluxVpnService : VpnService() {
     private var mInterface: ParcelFileDescriptor? = null
-    private var isRunning = false
+    @Volatile private var isRunning = false
+    @Volatile private var isStopping = false
+    @Volatile private var networkCallbackRegistered = false
     private var tun2SocksService: Tun2SocksControl? = null
     private val connectivity by lazy { getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager }
-    private val defaultNetworkRequest by lazy {
-        NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
-            .build()
-    }
     private val defaultNetworkCallback by lazy {
         object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                setUnderlyingNetworks(arrayOf(network))
+                updateUnderlyingNetworks(arrayOf(network))
             }
 
             override fun onCapabilitiesChanged(
                 network: Network,
                 networkCapabilities: NetworkCapabilities
             ) {
-                setUnderlyingNetworks(arrayOf(network))
+                updateUnderlyingNetworks(arrayOf(network))
             }
 
             override fun onLost(network: Network) {
-                setUnderlyingNetworks(null)
+                updateUnderlyingNetworks(null)
             }
+        }
+    }
+
+    private fun updateUnderlyingNetworks(networks: Array<Network>?) {
+        if (isStopping || mInterface == null) return
+        try {
+            setUnderlyingNetworks(networks)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to update underlying networks", e)
         }
     }
     
@@ -196,14 +200,14 @@ class FluxVpnService : VpnService() {
     }
 
     override fun onDestroy() {
+        stopVpn(stopService = false)
         super.onDestroy()
-        stopVpn()
-        stopStatusNotification()
         Log.d(TAG, "FluxVpnService onDestroy")
     }
 
     override fun onRevoke() {
         stopVpn()
+        super.onRevoke()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -217,7 +221,7 @@ class FluxVpnService : VpnService() {
                 stopVpn()
             }
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     /**
@@ -236,21 +240,36 @@ class FluxVpnService : VpnService() {
      * 设置 VPN 服务
      */
     private fun setupService() {
-        // 检查 VPN 权限
+        isStopping = false
+
         val prepare = prepare(this)
         if (prepare != null) {
             Log.e(TAG, "VPN permission not granted")
+            stopVpn()
             return
         }
 
-        // 配置 VPN 接口
-        if (!configureVpnService()) {
-            Log.e(TAG, "Failed to configure VPN service")
-            return
-        }
+        try {
+            if (!configureVpnService()) {
+                throw IllegalStateException("Failed to configure VPN interface")
+            }
 
-        // 启动 tun2socks
-        runTun2socks()
+            // 接口建立后先进入前台服务，再启动转发核心
+            startStatusNotification()
+            runTun2socks()
+
+            // 只有 native tun2socks 启动调用成功返回后才发布连接状态
+            isRunning = true
+            isVpnRunning = true
+            MainActivity.emitVpnStatus(true)
+            Log.d(TAG, "VPN and Tun2Socks started successfully")
+        } catch (e: UnsatisfiedLinkError) {
+            Log.e(TAG, "VPN startup failed: native library unavailable", e)
+            stopVpn()
+        } catch (e: Exception) {
+            Log.e(TAG, "VPN startup failed", e)
+            stopVpn()
+        }
     }
 
     /**
@@ -268,8 +287,10 @@ class FluxVpnService : VpnService() {
         // 关闭旧的接口（如果存在）
         try {
             mInterface?.close()
-        } catch (ignored: Exception) {
-            // ignored
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to close previous VPN interface", e)
+        } finally {
+            mInterface = null
         }
 
         // 配置平台特定功能
@@ -281,11 +302,11 @@ class FluxVpnService : VpnService() {
                 ?: throw IllegalStateException("VPN interface establishment returned null")
 
             mInterface = establishedInterface
+            registerDefaultNetworkCallback()
             Log.d(TAG, "VPN interface established successfully")
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to establish VPN interface", e)
-            stopVpn()
             return false
         }
     }
@@ -337,18 +358,22 @@ class FluxVpnService : VpnService() {
      * 配置平台特定功能
      */
     private fun configurePlatformFeatures(builder: Builder) {
-        // Android P (API 28) 及以上：绑定默认网络，避免 VPN 出站回环
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                connectivity.requestNetwork(defaultNetworkRequest, defaultNetworkCallback)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to request default network", e)
-            }
-        }
-
-        // Android Q (API 29) 及以上：设置非计量网络
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             builder.setMetered(false)
+        }
+    }
+
+    private fun registerDefaultNetworkCallback() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
+            !networkCallbackRegistered
+        ) {
+            try {
+                connectivity.registerDefaultNetworkCallback(defaultNetworkCallback)
+                networkCallbackRegistered = true
+                Log.d(TAG, "Default network callback registered")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to register default network callback", e)
+            }
         }
     }
 
@@ -357,33 +382,38 @@ class FluxVpnService : VpnService() {
      * 基于 v2rayNG 的实现方式
      */
     private fun runTun2socks() {
-        val vpnInterface = mInterface ?: run {
-            Log.e(TAG, "VPN interface not available")
-            return
-        }
+        val vpnInterface = mInterface
+            ?: throw IllegalStateException("VPN interface not available")
 
-        // 使用 TProxyService（基于 v2rayNG 的实现）
-        tun2SocksService = TProxyService(
+        val proxyService = TProxyService(
             context = applicationContext,
             vpnInterface = vpnInterface,
             isRunningProvider = { isRunning },
             restartCallback = { runTun2socks() }
         )
 
-        tun2SocksService?.startTun2Socks()
+        tun2SocksService = proxyService
+        proxyService.startTun2Socks()
     }
 
     /**
      * 停止 VPN 服务
      */
-    private fun stopVpn() {
+    private fun stopVpn(stopService: Boolean = true) {
+        val hadResources = isRunning || isVpnRunning ||
+            mInterface != null || tun2SocksService != null ||
+            networkCallbackRegistered || ticking
+
+        isStopping = true
         isRunning = false
         isVpnRunning = false
 
-        try {
-            MainActivity.emitVpnStatus(false)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to emit VPN stopped status", e)
+        if (hadResources) {
+            try {
+                MainActivity.emitVpnStatus(false)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to emit VPN stopped status", e)
+            }
         }
 
         try {
@@ -392,11 +422,15 @@ class FluxVpnService : VpnService() {
             Log.w(TAG, "Failed to stop status notification", e)
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
+            networkCallbackRegistered
+        ) {
             try {
                 connectivity.unregisterNetworkCallback(defaultNetworkCallback)
             } catch (e: Exception) {
-                Log.d(TAG, "Network callback already unregistered: ${e.message}")
+                Log.w(TAG, "Failed to unregister network callback", e)
+            } finally {
+                networkCallbackRegistered = false
             }
         }
 
@@ -422,7 +456,10 @@ class FluxVpnService : VpnService() {
             mInterface = null
         }
 
-        stopSelf()
+        if (stopService) {
+            stopSelf()
+        }
+
         Log.d(TAG, "VPN cleanup completed")
     }
 }
