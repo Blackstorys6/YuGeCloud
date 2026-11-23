@@ -277,11 +277,10 @@ class FluxVpnService : VpnService() {
 
         // 创建新的 VPN 接口
         try {
-            mInterface = builder.establish()
-            isRunning = true
-            isVpnRunning = true
-            MainActivity.emitVpnStatus(true)
-            startStatusNotification()
+            val establishedInterface = builder.establish()
+                ?: throw IllegalStateException("VPN interface establishment returned null")
+
+            mInterface = establishedInterface
             Log.d(TAG, "VPN interface established successfully")
             return true
         } catch (e: Exception) {
@@ -378,39 +377,53 @@ class FluxVpnService : VpnService() {
      * 停止 VPN 服务
      */
     private fun stopVpn() {
-        if (!isRunning) return
+        isRunning = false
+        isVpnRunning = false
 
         try {
-            isRunning = false
-            isVpnRunning = false
             MainActivity.emitVpnStatus(false)
-            stopStatusNotification()
-            // Core is managed by MainActivity now
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                try {
-                    connectivity.unregisterNetworkCallback(defaultNetworkCallback)
-                } catch (ignored: Exception) {
-                    // ignored
-                }
-            }
-            setUnderlyingNetworks(null)
-
-            // 停止 tun2socks
-            tun2SocksService?.stopTun2Socks()
-            tun2SocksService = null
-
-            // 关闭 VPN 接口
-            mInterface?.close()
-            mInterface = null
-
-            // 停止服务
-            stopSelf()
-
-            Log.d(TAG, "VPN stopped")
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping VPN", e)
+            Log.w(TAG, "Failed to emit VPN stopped status", e)
         }
+
+        try {
+            stopStatusNotification()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to stop status notification", e)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                connectivity.unregisterNetworkCallback(defaultNetworkCallback)
+            } catch (e: Exception) {
+                Log.d(TAG, "Network callback already unregistered: ${e.message}")
+            }
+        }
+
+        try {
+            setUnderlyingNetworks(null)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to clear underlying networks", e)
+        }
+
+        try {
+            tun2SocksService?.stopTun2Socks()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to stop tun2socks", e)
+        } finally {
+            tun2SocksService = null
+        }
+
+        try {
+            mInterface?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close VPN interface", e)
+        } finally {
+            mInterface = null
+        }
+
+        stopSelf()
+        Log.d(TAG, "VPN cleanup completed")
     }
 }
 
@@ -474,8 +487,8 @@ class TProxyService(
             hev.htproxy.TProxyService.TProxyStartService(configFile.absolutePath, vpnInterface.fd)
             Log.d(TAG, "Tun2Socks started successfully")
         } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "hev-socks5-tunnel library not found. Please add the native library to your project.", e)
-            Log.e(TAG, "You can copy the library from v2rayNG project or compile it from: https://github.com/heiher/hev-socks5-tunnel")
+            Log.e(TAG, "hev-socks5-tunnel native library unavailable", e)
+            throw IllegalStateException("Tun2Socks native library unavailable", e)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start Tun2Socks: ${e.message}", e)
             throw e
