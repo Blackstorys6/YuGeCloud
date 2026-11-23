@@ -11,6 +11,8 @@ import 'remote_config_service.dart';
 
 /// 订阅服务
 class SubscriptionService {
+  static int _cacheGeneration = 0;
+
   final V2BoardApi _api = V2BoardApi();
 
   /// 获取真实的订阅链接
@@ -252,6 +254,7 @@ class SubscriptionService {
   /// 获取并解析订阅节点
   /// [forceRefresh] 是否强制刷新，默认为 false
   Future<List<ServerNode>> fetchNodes({bool forceRefresh = false}) async {
+    final cacheGeneration = _cacheGeneration;
     try {
       // 1. 检查缓存 (默认优先使用缓存)
       if (!forceRefresh) {
@@ -271,7 +274,10 @@ class SubscriptionService {
         final nodes = parseNodes(subscriptionContent);
 
         if (nodes.isNotEmpty) {
-          await _saveSubscriptionCache(subscriptionContent);
+          await _saveSubscriptionCache(
+            subscriptionContent,
+            expectedGeneration: cacheGeneration,
+          );
           return nodes;
         }
         primaryError = 'Primary subscription returned no valid nodes';
@@ -310,7 +316,10 @@ class SubscriptionService {
           throw Exception('Backup subscription returned no valid nodes');
         }
 
-        await _saveSubscriptionCache(backupContent);
+        await _saveSubscriptionCache(
+          backupContent,
+          expectedGeneration: cacheGeneration,
+        );
         print('[SubscriptionService] Backup subscription succeeded');
         return backupNodes;
       } catch (e) {
@@ -367,15 +376,27 @@ class SubscriptionService {
     }
   }
 
-  Future<void> _saveSubscriptionCache(String content) async {
+  Future<void> _saveSubscriptionCache(
+    String content, {
+    required int expectedGeneration,
+  }) async {
     try {
-      // 保存内容
+      if (expectedGeneration != _cacheGeneration) return;
+
       final directory = await getApplicationDocumentsDirectory();
+      if (expectedGeneration != _cacheGeneration) return;
+
       final file = File('${directory.path}/subscription.txt');
       await file.writeAsString(content);
 
-      // 保存时间戳
+      if (expectedGeneration != _cacheGeneration) {
+        if (await file.exists()) await file.delete();
+        return;
+      }
+
       final prefs = await SharedPreferences.getInstance();
+      if (expectedGeneration != _cacheGeneration) return;
+
       await prefs.setInt(
         'nodes_last_update',
         DateTime.now().millisecondsSinceEpoch,
@@ -383,6 +404,21 @@ class SubscriptionService {
     } catch (_) {
       // ignore
     }
+  }
+
+  /// 退出登录时清除订阅缓存
+  Future<void> clearSubscriptionCache() async {
+    _cacheGeneration++;
+
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/subscription.txt');
+
+    if (await file.exists()) {
+      await file.delete();
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('nodes_last_update');
   }
 
   /// 保存订阅内容到本地

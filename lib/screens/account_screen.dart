@@ -7,6 +7,8 @@ import '../models/user_info.dart';
 import '../services/user_data_service.dart';
 import '../services/v2board_api.dart'; // For V2BoardApiException
 import '../services/api_config.dart';
+import '../services/subscription_service.dart';
+import '../services/unified_vpn_service.dart';
 import '../services/alert_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/formatters.dart';
@@ -22,6 +24,8 @@ import 'tos_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   final VoidCallback onLogout;
+  final VoidCallback onLogoutStarted;
+  final VoidCallback onLogoutCancelled;
   final String connectionStatus;
   final String connectionState;
   final int reloadToken;
@@ -29,6 +33,8 @@ class AccountScreen extends StatefulWidget {
   const AccountScreen({
     super.key,
     required this.onLogout,
+    required this.onLogoutStarted,
+    required this.onLogoutCancelled,
     required this.connectionStatus,
     required this.connectionState,
     this.reloadToken = 0,
@@ -92,10 +98,39 @@ class _AccountScreenState extends State<AccountScreen> {
     }
   }
 
+  bool _isLoggingOut = false;
+
   Future<void> _logout() async {
-    // 用户反馈：不用走 logout 接口，直接清除本地状态跳转
-    await ApiConfig().clearAuth();
-    if (mounted) widget.onLogout();
+    if (_isLoggingOut) return;
+    _isLoggingOut = true;
+
+    try {
+      widget.onLogoutStarted();
+      final vpn = UnifiedVpnService.instance;
+
+      if (await vpn.isConnected()) {
+        final disconnected = await vpn.disconnect();
+        final stillConnected = await vpn.isConnected();
+
+        if (!disconnected || stillConnected) {
+          throw Exception('VPN disconnect could not be confirmed');
+        }
+      }
+
+      await SubscriptionService().clearSubscriptionCache();
+      await ApiConfig().clearAuth();
+
+      if (mounted) widget.onLogout();
+    } catch (_) {
+      widget.onLogoutCancelled();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('退出失败，请确认 VPN 已断开后重试')),
+        );
+      }
+    } finally {
+      _isLoggingOut = false;
+    }
   }
 
   @override
@@ -168,10 +203,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       if (isAuthExpired) ...[
                         SizedBox(width: 12),
                         ElevatedButton(
-                          onPressed: () async {
-                            await ApiConfig().clearAuth();
-                            if (context.mounted) widget.onLogout();
-                          },
+                          onPressed: _logout,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: palette.accent,
                           ),

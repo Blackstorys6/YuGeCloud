@@ -47,6 +47,8 @@ class _RootShellState extends State<RootShell> with WindowListener {
   bool _isSwitching = false;
   int _accountReload = 0;
   bool _isConnecting = false;
+  bool _isLoggingOut = false;
+  int _connectionGeneration = 0;
   bool _isInitializing = true; // 全局初始化状态
   bool _isMaintenanceMode = false;
   String? _maintenanceMessage;
@@ -74,6 +76,20 @@ class _RootShellState extends State<RootShell> with WindowListener {
       windowManager.addListener(this);
       _initWindow();
     }
+  }
+
+  bool _isConnectionAttemptCurrent(int generation) {
+    return mounted && !_isLoggingOut && generation == _connectionGeneration;
+  }
+
+  void _beginLogout() {
+    _isLoggingOut = true;
+    _connectionGeneration++;
+  }
+
+  void _cancelLogout() {
+    _connectionGeneration++;
+    _isLoggingOut = false;
   }
 
   /// 统一初始化所有关键数据
@@ -257,7 +273,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
   }
 
   void _onVpnStatusChanged(bool isConnected) {
-    if (!mounted) return;
+    if (!mounted || _isLoggingOut) return;
     if (!isConnected && _status == ShellStatus.connected) {
       setState(() {
         _status = ShellStatus.disconnected;
@@ -333,7 +349,8 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
   Future<void> _toggleConnection() async {
     // ??????????????????
-    if (_isConnecting) return;
+    if (_isLoggingOut || _isConnecting || !mounted) return;
+    final generation = _connectionGeneration;
 
     _isConnecting = true;
     try {
@@ -344,6 +361,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
               AppLocalizations.of(context)?.disconnecting ?? '????????????...';
         });
         await _vpnService.disconnect();
+        if (!_isConnectionAttemptCurrent(generation)) return;
         setState(() {
           _status = ShellStatus.disconnected;
           _connectedNodeName = null;
@@ -354,6 +372,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
         await _connectWithLastNode();
       }
     } catch (e) {
+      if (!_isConnectionAttemptCurrent(generation)) return;
       setState(() {
         _status = ShellStatus.error;
         _statusMessage =
@@ -365,7 +384,8 @@ class _RootShellState extends State<RootShell> with WindowListener {
   }
 
   Future<void> _reconnectConnection() async {
-    if (_isConnecting) return;
+    if (_isLoggingOut || _isConnecting || !mounted) return;
+    final generation = _connectionGeneration;
     _isConnecting = true;
 
     try {
@@ -382,8 +402,10 @@ class _RootShellState extends State<RootShell> with WindowListener {
         } catch (_) {}
       }
 
+      if (!_isConnectionAttemptCurrent(generation)) return;
       await _connectWithLastNode();
     } catch (e) {
+      if (!_isConnectionAttemptCurrent(generation)) return;
       setState(() {
         _status = ShellStatus.error;
         _statusMessage =
@@ -395,6 +417,8 @@ class _RootShellState extends State<RootShell> with WindowListener {
   }
 
   Future<void> _connectWithLastNode() async {
+    if (_isLoggingOut || !mounted) return;
+    final generation = _connectionGeneration;
     setState(() {
       _status = ShellStatus.connecting;
       _connectedNodeName = null;
@@ -413,6 +437,8 @@ class _RootShellState extends State<RootShell> with WindowListener {
             onTimeout: () => throw Exception(fetchNodesTimeoutMessage),
           );
 
+      if (!_isConnectionAttemptCurrent(generation)) return;
+
       if (nodes.isEmpty) {
         setState(() {
           _status = ShellStatus.error;
@@ -425,6 +451,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
       // ???????????????????????????
       final prefs = await SharedPreferences.getInstance();
+      if (!_isConnectionAttemptCurrent(generation)) return;
       final lastNodeName = prefs.getString('last_node_name');
 
       ServerNode targetNode;
@@ -449,9 +476,16 @@ class _RootShellState extends State<RootShell> with WindowListener {
       });
 
       // ???????????????????????????
+      if (!_isConnectionAttemptCurrent(generation)) return;
+
       final success = await _vpnService
           .connect(targetNode)
           .timeout(const Duration(seconds: 30), onTimeout: () => false);
+
+      if (!_isConnectionAttemptCurrent(generation)) {
+        if (success) await _vpnService.disconnect();
+        return;
+      }
 
       // ???????????????????????????
       if (success) {
@@ -466,6 +500,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
             : AppLocalizations.of(context)?.connectionFailed ?? '????????????';
       });
     } catch (e) {
+      if (!_isConnectionAttemptCurrent(generation)) return;
       setState(() {
         _status = ShellStatus.error;
         _connectedNodeName = null;
@@ -476,7 +511,8 @@ class _RootShellState extends State<RootShell> with WindowListener {
   }
 
   Future<void> _connectNode(ServerNode node) async {
-    if (_isConnecting) return;
+    if (_isLoggingOut || _isConnecting || !mounted) return;
+    final generation = _connectionGeneration;
     _isConnecting = true;
     setState(() {
       _status = ShellStatus.connecting;
@@ -486,7 +522,13 @@ class _RootShellState extends State<RootShell> with WindowListener {
     });
     try {
       await _vpnService.disconnect();
+      if (!_isConnectionAttemptCurrent(generation)) return;
       final success = await _vpnService.connect(node);
+
+      if (!_isConnectionAttemptCurrent(generation)) {
+        if (success) await _vpnService.disconnect();
+        return;
+      }
 
       // 保存手动选择的节点
       if (success) {
@@ -502,6 +544,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
             : AppLocalizations.of(context)?.connectionFailed ?? '连接失败';
       });
     } catch (e) {
+      if (!_isConnectionAttemptCurrent(generation)) return;
       setState(() {
         _status = ShellStatus.error;
         _connectedNodeName = null;
@@ -515,7 +558,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
   final bool _isLoadingNodes = false;
 
   Future<void> _showNodePicker() async {
-    if (_isConnecting) return;
+    if (_isLoggingOut || _isConnecting) return;
 
     // We don't need _isLoadingNodes anymore since NodePickerSheet handles it
     // But we keep the check to prevent opening while connecting
@@ -597,6 +640,8 @@ class _RootShellState extends State<RootShell> with WindowListener {
       case 2: // Account
         return AccountScreen(
           onLogout: widget.onLogout,
+          onLogoutStarted: _beginLogout,
+          onLogoutCancelled: _cancelLogout,
           connectionStatus: _statusMessage,
           connectionState: _status.name,
           reloadToken: _accountReload,

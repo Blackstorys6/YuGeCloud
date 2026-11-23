@@ -18,6 +18,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.concurrent.atomic.AtomicLong
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : FlutterActivity() {
@@ -29,6 +30,15 @@ class MainActivity : FlutterActivity() {
     private var currentProtocol: String = ""
     private var isInitialized = false
     private var isGeoDataReady = false
+
+    private val connectionGeneration = AtomicLong(0L)
+    private val vpnOperationLock = Any()
+
+    @Volatile
+    private var pendingPermissionGeneration: Long = -1L
+
+    private fun isConnectionCurrent(generation: Long): Boolean =
+        connectionGeneration.get() == generation
     
     companion object {
         private const val TAG = "Flux"
@@ -56,10 +66,14 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGUMENT", "Config is null", null)
                         return@setMethodCallHandler
                     }
+
+                    val generation = connectionGeneration.incrementAndGet()
+                    pendingPermissionGeneration = -1L
                     FluxVpnService.nodeName = call.argument<String>("nodeName") ?: ""
+
                     Thread {
                         try {
-                            val success = connectV2ray(configJson)
+                            val success = connectV2ray(configJson, generation)
                             mainHandler.post { result.success(success) }
                         } catch (e: Exception) {
                             mainHandler.post {
@@ -69,9 +83,12 @@ class MainActivity : FlutterActivity() {
                     }.start()
                 }
                 "disconnect" -> {
+                    val generation = connectionGeneration.incrementAndGet()
+                    pendingPermissionGeneration = -1L
+
                     Thread {
                         try {
-                            disconnectV2ray()
+                            disconnectV2ray(generation)
                             mainHandler.post { result.success(true) }
                         } catch (e: Exception) {
                             mainHandler.post {
@@ -123,8 +140,10 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        val generation = connectionGeneration.incrementAndGet()
+        pendingPermissionGeneration = -1L
+        disconnectV2ray(generation)
         super.onDestroy()
-        disconnectV2ray()
     }
 
     /**
@@ -185,158 +204,196 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun connectV2ray(configJson: String): Boolean {
-        return try {
-            if (isV2rayRunning) {
-                disconnectV2ray()
-                Thread.sleep(500)
+    private fun connectV2ray(configJson: String, generation: Long): Boolean =
+        synchronized(vpnOperationLock) {
+            if (!isConnectionCurrent(generation)) return@synchronized false
+
+            try {
+                if (isV2rayRunning) {
+                    stopVpnService()
+                    xrayProcess?.destroy()
+                    xrayProcess = null
+                    isV2rayRunning = false
+                    currentProtocol = ""
+                    Thread.sleep(500)
+                }
+
+                if (!isConnectionCurrent(generation)) return@synchronized false
+
+                val fullConfigObj = JSONObject(configJson)
+                val outboundConfig = if (fullConfigObj.has("outbound")) {
+                    fullConfigObj.getJSONObject("outbound")
+                } else {
+                    fullConfigObj
+                }
+
+                val routingMode = fullConfigObj.optString("routingMode", "rule")
+                val routingRules = fullConfigObj.optJSONArray("routingRules")
+                val protocol = outboundConfig.optString("protocol", "")
+                currentProtocol = protocol
+
+                Log.d(TAG, "Connecting protocol: $protocol, Mode: $routingMode")
+
+                if (!isConnectionCurrent(generation)) return@synchronized false
+
+                connectXray(outboundConfig, routingMode, routingRules, generation)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error connecting: ${e.message}")
+                e.printStackTrace()
+                false
             }
-
-            val fullConfigObj = JSONObject(configJson)
-            
-            // 兼容旧逻辑：如果直接传的是 Outbound Config (没有 inbound/outbound 包装)，则当作 old style
-            val outboundConfig = if (fullConfigObj.has("outbound")) {
-                fullConfigObj.getJSONObject("outbound")
-            } else {
-                fullConfigObj
-            }
-            
-            val routingMode = fullConfigObj.optString("routingMode", "rule")
-            val routingRules = fullConfigObj.optJSONArray("routingRules")
-
-            val protocol = outboundConfig.optString("protocol", "")
-            currentProtocol = protocol
-            
-            Log.d(TAG, "Connecting protocol: $protocol, Mode: $routingMode")
-            
-            return connectXray(outboundConfig, routingMode, routingRules)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error connecting: ${e.message}")
-            e.printStackTrace()
-            false
         }
-    }
-    
+
     // Old Hysteria2 methods removed (unified into Xray)
     
     /**
      * 使用 Xray 连接（非 Hysteria2 协议）
      */
-    private fun connectXray(outboundConfig: JSONObject, routingMode: String, customRules: org.json.JSONArray?): Boolean {
-        // 1. 获取可执行文件
+    private fun connectXray(
+        outboundConfig: JSONObject,
+        routingMode: String,
+        customRules: org.json.JSONArray?,
+        generation: Long
+    ): Boolean {
+        if (!isConnectionCurrent(generation)) return false
+
         val executablePath = getXrayExecutable()
         if (executablePath == null) {
             Log.e(TAG, "Xray binary not found!")
             return false
         }
 
-        // 2. 生成配置文件
         val configDir = filesDir.absolutePath
         val configFile = File(configDir, "config.json")
         val fullConfig = buildV2rayConfig(outboundConfig, routingMode, customRules)
-        
-        // 写入配置文件
-        FileOutputStream(configFile).use { 
-            it.write(fullConfig.toByteArray()) 
+
+        FileOutputStream(configFile).use {
+            it.write(fullConfig.toByteArray())
         }
 
-        // 3. 启动进程
+        if (!isConnectionCurrent(generation)) return false
+
         Log.d(TAG, "Starting Xray process: $executablePath -c ${configFile.absolutePath}")
         val pb = ProcessBuilder(executablePath, "-c", configFile.absolutePath)
         pb.directory(filesDir)
-        // 设置环境变量指向 dat 目录
         val env = pb.environment()
         env["xray.location.asset"] = configDir
-        
-        xrayProcess = pb.start()
-        
-        // 4. 读取日志（可选，防止 buffer 满）
+
+        val process = pb.start()
+        xrayProcess = process
+
         Thread {
             try {
-                val reader = BufferedReader(InputStreamReader(xrayProcess!!.inputStream))
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     Log.d("XrayCore", line ?: "")
                 }
             } catch (e: Exception) {
-                // Ignore exceptions when process is destroyed
                 Log.d("XrayCore", "Process output stream closed")
             }
         }.start()
-        
+
         Thread {
             try {
-                val reader = BufferedReader(InputStreamReader(xrayProcess!!.errorStream))
+                val reader = BufferedReader(InputStreamReader(process.errorStream))
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     Log.e("XrayCore", line ?: "")
                 }
             } catch (e: Exception) {
-                // Ignore exceptions when process is destroyed
-                 Log.d("XrayCore", "Process error stream closed")
+                Log.d("XrayCore", "Process error stream closed")
             }
         }.start()
 
-        // 等待启动
         Thread.sleep(500)
-        
-        if (xrayProcess!!.isAlive) {
-            isV2rayRunning = true
-            requestVpnPermission()
-            return true
-        } else {
-            Log.e(TAG, "Xray process died immediately")
-            return false
-        }
-    }
 
-    private fun disconnectV2ray() {
-        try {
-            stopVpnService()
-            
-            // 停止 Xray 进程
-            if (xrayProcess != null) {
-                xrayProcess!!.destroy()
-                xrayProcess = null
-            }
-            
-
-            
+        if (!isConnectionCurrent(generation)) {
+            process.destroy()
+            if (xrayProcess === process) xrayProcess = null
             isV2rayRunning = false
             currentProtocol = ""
-        } catch (e: Exception) {
-            Log.e(TAG, "Error disconnecting: ${e.message}")
+            return false
+        }
+
+        if (process.isAlive) {
+            isV2rayRunning = true
+            requestVpnPermission(generation)
+            return true
+        }
+
+        Log.e(TAG, "Xray process died immediately")
+        if (xrayProcess === process) xrayProcess = null
+        isV2rayRunning = false
+        return false
+    }
+
+    private fun disconnectV2ray(expectedGeneration: Long) {
+        synchronized(vpnOperationLock) {
+            if (!isConnectionCurrent(expectedGeneration)) return
+
+            pendingPermissionGeneration = -1L
+            try {
+                stopVpnService()
+                xrayProcess?.destroy()
+                xrayProcess = null
+                isV2rayRunning = false
+                currentProtocol = ""
+            } catch (e: Exception) {
+                Log.e(TAG, "Error disconnecting: ${e.message}")
+            }
         }
     }
 
-    private fun requestVpnPermission() {
+    private fun requestVpnPermission(generation: Long) {
+        if (!isConnectionCurrent(generation)) return
+
         val intent = VpnService.prepare(this)
         if (intent != null) {
-            startActivityForResult(intent, REQUEST_VPN_PERMISSION)
+            pendingPermissionGeneration = generation
+            mainHandler.post {
+                if (isConnectionCurrent(generation) &&
+                    pendingPermissionGeneration == generation
+                ) {
+                    startActivityForResult(intent, REQUEST_VPN_PERMISSION)
+                }
+            }
         } else {
-            startVpnService()
+            mainHandler.post {
+                startVpnServiceIfCurrent(generation)
+            }
         }
     }
-    
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_VPN_PERMISSION && resultCode == RESULT_OK) {
-            startVpnService()
-        }
-    }
-    
-    private fun startVpnService() {
-        try {
-            val intent = Intent(this, FluxVpnService::class.java).apply {
-                action = FluxVpnService.ACTION_START
+
+        if (requestCode == REQUEST_VPN_PERMISSION) {
+            val generation = pendingPermissionGeneration
+            pendingPermissionGeneration = -1L
+
+            if (resultCode == RESULT_OK && generation >= 0L) {
+                startVpnServiceIfCurrent(generation)
             }
-            startService(intent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error starting VPN service: ${e.message}")
         }
     }
-    
+
+    private fun startVpnServiceIfCurrent(generation: Long) {
+        synchronized(vpnOperationLock) {
+            if (!isConnectionCurrent(generation)) return
+            if (xrayProcess?.isAlive != true) return
+
+            try {
+                val intent = Intent(this, FluxVpnService::class.java).apply {
+                    action = FluxVpnService.ACTION_START
+                }
+                startService(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting VPN service: ${e.message}")
+            }
+        }
+    }
+
     private fun stopVpnService() {
         try {
             val intent = Intent(this, FluxVpnService::class.java).apply {
