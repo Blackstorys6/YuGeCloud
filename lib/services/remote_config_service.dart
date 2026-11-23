@@ -19,6 +19,7 @@ class RemoteConfigService {
   /// TODO: Replace with your own OSS/CDN URLs
   static const List<String> _ossUrls = [
     'https://panel.yugenb.dpdns.org/app-updates/config/latest.json',
+    'https://hk.yugenb.dpdns.org:8444/app-updates/config/latest.json',
   ];
 
   /// 默认 API 域名（当 OSS 配置获取失败时使用）
@@ -87,16 +88,22 @@ class RemoteConfigService {
       }
     }
 
-    if (_defaultDomain != excludeDomain &&
-        _isValidDomain(_defaultDomain) &&
-        await _testDomain(_defaultDomain)) {
-      _log('Using verified default domain: $_defaultDomain');
-      await _setActiveDomain(_defaultDomain);
-      return _defaultDomain;
+    if (excludeDomain != null) {
+      if (_defaultDomain != excludeDomain &&
+          _isValidDomain(_defaultDomain) &&
+          await _testDomain(_defaultDomain)) {
+        _log('Using verified default domain: $_defaultDomain');
+        await _setActiveDomain(_defaultDomain);
+        return _defaultDomain;
+      }
+
+      _activeDomain = null;
+      throw StateError('No healthy alternative API domain available');
     }
 
-    _activeDomain = null;
-    throw StateError('No healthy API domain available');
+    _log('Using default domain fallback: $_defaultDomain');
+    await _setActiveDomain(_defaultDomain);
+    return _defaultDomain;
   }
 
   /// 强制刷新域名（用于域名失效时）

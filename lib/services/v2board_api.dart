@@ -128,12 +128,6 @@ class V2BoardApi {
       final jsonString = jsonEncode(payload);
       final encrypted = encrypter.encrypt(jsonString);
 
-      // 调试输出
-      if (kDebugMode) {
-        print('[sendEmailVerify] payload: $jsonString');
-        print('[sendEmailVerify] encrypted: ${encrypted.base64}');
-      }
-
       // 发送加密后的 params
       return _post(
           '/passport/comm/sendEmailVerify',
@@ -256,11 +250,15 @@ class V2BoardApi {
     String path, {
     Map<String, String>? query,
     bool withAuth = true,
+    bool retryOnNetworkFailure = true,
+    bool allowFailover = true,
   }) async {
     return _getWithRetry(
       path,
       query: query,
       withAuth: withAuth,
+      retryOnNetworkFailure: retryOnNetworkFailure,
+      allowFailover: allowFailover,
       didRetry: false,
       didFailover: false,
     );
@@ -270,6 +268,8 @@ class V2BoardApi {
     String path, {
     required Map<String, String>? query,
     required bool withAuth,
+    required bool retryOnNetworkFailure,
+    required bool allowFailover,
     required bool didRetry,
     required bool didFailover,
   }) async {
@@ -299,13 +299,16 @@ class V2BoardApi {
             path,
             query: query,
             withAuth: withAuth,
+            retryOnNetworkFailure: retryOnNetworkFailure,
+            allowFailover: allowFailover,
             didRetry: true,
             didFailover: didFailover,
           );
         }
         return _handle(response, context: uri.toString());
       } catch (e) {
-        if (!didFailover &&
+        if (allowFailover &&
+            !didFailover &&
             failedUri != null &&
             (e is HandshakeException ||
                 e is SocketException ||
@@ -320,11 +323,14 @@ class V2BoardApi {
             path,
             query: query,
             withAuth: withAuth,
+            retryOnNetworkFailure: retryOnNetworkFailure,
+            allowFailover: allowFailover,
             didRetry: didRetry,
             didFailover: true,
           );
         }
-        if (retryCount < maxRetries &&
+        if (retryOnNetworkFailure &&
+            retryCount < maxRetries &&
             (e is HandshakeException ||
                 e is SocketException ||
                 e is TimeoutException)) {
@@ -352,8 +358,6 @@ class V2BoardApi {
     required bool withAuth,
     required bool didRetry,
   }) async {
-    int retryCount = 0;
-    const maxRetries = 2;
     while (true) {
       try {
         final uri = await _buildUri(path, null);
@@ -382,13 +386,6 @@ class V2BoardApi {
         }
         return _handle(response, context: uri.toString());
       } catch (e) {
-        if (retryCount < maxRetries &&
-            (e is HandshakeException || e is SocketException)) {
-          retryCount++;
-          _log('RETRY', 'Attempt $retryCount failed for $path: $e');
-          await Future.delayed(Duration(seconds: 1 * retryCount));
-          continue;
-        }
         rethrow;
       }
     }
@@ -520,7 +517,6 @@ class V2BoardApi {
     }
     if (kDebugMode) print('[FluxAPI] $method $url');
     if (kDebugMode) print('[FluxAPI] headers: $safeHeaders');
-    if (body != null) if (kDebugMode) print('[FluxAPI] body: $body');
   }
 
   // 临时诊断邀请接口字段类型
@@ -550,7 +546,11 @@ class V2BoardApi {
   }
 
   Future<void> generateInviteCode() async {
-    await _get('/user/invite/save');
+    await _get(
+      '/user/invite/save',
+      retryOnNetworkFailure: false,
+      allowFailover: false,
+    );
   }
 
   Future<List<InviteDetail>> fetchInviteDetails() async {
@@ -586,8 +586,5 @@ class V2BoardApi {
   void _logResponse(http.Response response, String url) {
     if (!kDebugMode) return;
     if (kDebugMode) print('[FluxAPI] <-- ${response.statusCode} $url');
-    if (response.body.isNotEmpty) {
-      if (kDebugMode) print('[FluxAPI] resp: ${response.body}');
-    }
   }
 }
