@@ -136,53 +136,79 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   Future<void> _submit() async {
+    final submitMode = _mode;
+
     setState(() {
       _loading = true;
       _message = null;
     });
+
     try {
       HapticFeedback.lightImpact();
-      Map<String, dynamic> response;
-      if (_mode == AuthMode.login) {
+
+      if (submitMode == AuthMode.reset) {
+        await _api.forgetPassword(
+          _emailController.text,
+          _emailCodeController.text,
+          _newPasswordController.text,
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          _mode = AuthMode.login;
+          _emailCodeController.clear();
+          _newPasswordController.clear();
+          _passwordController.clear();
+          _message = 'Password reset successful. Please log in.';
+        });
+        return;
+      }
+
+      final Map<String, dynamic> response;
+
+      if (submitMode == AuthMode.login) {
         response = await _api.login(
           _emailController.text,
           _passwordController.text,
         );
-      } else if (_mode == AuthMode.register) {
+      } else {
         response = await _api.register(
           _emailController.text,
           _passwordController.text,
           inviteCode: _inviteController.text,
           emailCode: _emailCodeController.text,
         );
-      } else {
-        response = await _api.forgetPassword(
-          _emailController.text,
-          _emailCodeController.text,
-          _newPasswordController.text,
-        );
       }
 
-      final token = (response['data'] ?? {})['token'];
-      if (token is String && token.isNotEmpty) {
-        await _config.setToken(token);
-        // 确保 token 保存后立即刷新缓存
-        await _config.refreshAuthCache();
+      if (!mounted) return;
+
+      final data = response['data'];
+      if (data is Map) {
+        final token = data['token'];
+        if (token is String && token.isNotEmpty) {
+          await _config.setToken(token);
+          await _config.refreshAuthCache();
+        }
+
+        final authData = data['auth_data'];
+        if (authData is String && authData.isNotEmpty) {
+          await _config.setAuthData(authData);
+          await _config.refreshAuthCache();
+        }
       }
-      final authData = (response['data'] ?? {})['auth_data'];
-      if (authData is String && authData.isNotEmpty) {
-        await _config.setAuthData(authData);
-        // 确保 authData 保存后立即刷新缓存
-        await _config.refreshAuthCache();
-      }
-      // 添加短暂延迟，确保数据已完全保存
+
       await Future.delayed(const Duration(milliseconds: 100));
+
+      if (!mounted) return;
       widget.onAuthed();
     } catch (e) {
-      final msg = e is V2BoardApiException ? e.message : e.toString();
-      setState(() {
-        _message = msg;
-      });
+      if (mounted) {
+        final msg = e is V2BoardApiException ? e.message : e.toString();
+        setState(() {
+          _message = msg;
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _loading = false);

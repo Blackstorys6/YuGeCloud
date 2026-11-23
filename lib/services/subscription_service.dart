@@ -23,10 +23,10 @@ class SubscriptionService {
       if (data is Map && data.containsKey('subscribe_url')) {
         return data['subscribe_url'].toString();
       }
-      print('[SubscriptionService] Invalid data format: $data');
+      print('[SubscriptionService] Invalid response data type: ${data.runtimeType}');
       throw Exception('API response does not contain subscribe_url');
     } catch (e) {
-      print('[SubscriptionService] Error fetching subscription URL: $e');
+      print('[SubscriptionService] Failed to fetch subscription URL (${e.runtimeType})');
       // 给一个兜底（如果已经有 token 的话）
       rethrow;
     }
@@ -89,7 +89,7 @@ class SubscriptionService {
     Uri? requiredOrigin,
   }) async {
     if (requireHttps && !_isValidHttpsSubscriptionUrl(url)) {
-      throw Exception('Backup subscription URL must use HTTPS');
+      throw Exception('Subscription URL must use HTTPS');
     }
 
     int retryCount = 0;
@@ -119,7 +119,7 @@ class SubscriptionService {
           const maxRedirects = 5;
           http.Response? response;
 
-          for (var i = 0; i < maxRedirects; i++) {
+          for (var i = 0; i <= maxRedirects; i++) {
             final request = http.Request('GET', current)
               ..followRedirects = false
               ..headers.addAll({'User-Agent': 'Flux/1.0', 'Accept': '*/*'});
@@ -127,15 +127,22 @@ class SubscriptionService {
             response = await http.Response.fromStream(streamed);
 
             if (response.statusCode >= 300 && response.statusCode < 400) {
+              if (i == maxRedirects) {
+                throw Exception('Too many subscription redirects');
+              }
+
               final location = response.headers['location'];
               if (location == null || location.isEmpty) {
                 throw Exception('Redirect without location');
               }
+
               current = current.resolve(location);
+
               if (requireHttps &&
                   !_isValidHttpsSubscriptionUrl(current.toString())) {
-                throw Exception('Insecure backup subscription redirect');
+                throw Exception('Insecure subscription redirect');
               }
+
               if (requiredOrigin != null &&
                   !_isSameOrigin(current, requiredOrigin)) {
                 throw Exception('Untrusted subscription redirect origin');
@@ -144,10 +151,10 @@ class SubscriptionService {
             }
             break;
           }
-          response ??= await client.get(
-            current,
-            headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
-          );
+
+          if (response == null) {
+            throw Exception('No subscription response received');
+          }
 
           if (response.statusCode == 200) {
             return response.body;
@@ -161,7 +168,7 @@ class SubscriptionService {
         }
       } catch (e) {
         retryCount++;
-        print('[SubscriptionService] Download attempt $retryCount failed: $e');
+        print('[SubscriptionService] Download attempt $retryCount failed (${e.runtimeType})');
         if (retryCount >= maxRetries) {
           throw Exception(
             'Error downloading subscription after $maxRetries attempts: $e',
@@ -270,7 +277,10 @@ class SubscriptionService {
       try {
         primarySubscriptionUrl = await getSubscriptionUrl();
         final subscriptionContent =
-            await downloadSubscription(primarySubscriptionUrl);
+            await downloadSubscription(
+              primarySubscriptionUrl,
+              requireHttps: true,
+            );
         final nodes = parseNodes(subscriptionContent);
 
         if (nodes.isNotEmpty) {
@@ -282,8 +292,8 @@ class SubscriptionService {
         }
         primaryError = 'Primary subscription returned no valid nodes';
       } catch (e) {
-        primaryError = e.toString();
-        print('[SubscriptionService] Primary subscription failed: $e');
+        primaryError = 'Primary subscription request failed';
+        print('[SubscriptionService] Primary subscription failed (${e.runtimeType})');
       }
 
       // 3. 主订阅失败后，保留当前用户的订阅参数并切换 HK 入口
@@ -323,8 +333,8 @@ class SubscriptionService {
         print('[SubscriptionService] Backup subscription succeeded');
         return backupNodes;
       } catch (e) {
-        backupError = e.toString();
-        print('[SubscriptionService] Backup subscription failed: $e');
+        backupError = 'Backup subscription request failed';
+        print('[SubscriptionService] Backup subscription failed (${e.runtimeType})');
       }
 
       // 4. 两种订阅都失败时，保留原有强制刷新缓存回退
@@ -343,7 +353,8 @@ class SubscriptionService {
         final cached = await _getCachedNodes(ignoreExpiration: true);
         if (cached != null) return cached;
       }
-      throw Exception('Failed to fetch nodes: $e');
+      print('[SubscriptionService] Fetch nodes failed (${e.runtimeType})');
+      throw Exception('Failed to fetch subscription nodes');
     }
   }
 
@@ -351,17 +362,16 @@ class SubscriptionService {
     bool ignoreExpiration = false,
   }) async {
     try {
-      // final prefs = await SharedPreferences.getInstance();
-      // final lastUpdate = prefs.getInt('nodes_last_update');
+      if (!ignoreExpiration) {
+        final prefs = await SharedPreferences.getInstance();
+        final lastUpdate = prefs.getInt('nodes_last_update');
+        if (lastUpdate == null) return null;
 
-      // // 如果没有记录或已过期（超过24小时）且不忽略过期
-      // if (!ignoreExpiration) {
-      //   if (lastUpdate == null) return null;
-      //   final lastTime = DateTime.fromMillisecondsSinceEpoch(lastUpdate);
-      //   if (DateTime.now().difference(lastTime).inHours >= 24) {
-      //     return null;
-      //   }
-      // }
+        final age = DateTime.now().millisecondsSinceEpoch - lastUpdate;
+        if (age < 0 || age >= const Duration(hours: 24).inMilliseconds) {
+          return null;
+        }
+      }
 
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/subscription.txt');
@@ -427,6 +437,12 @@ class SubscriptionService {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/subscription.txt');
       await file.writeAsString(content);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(
+        'nodes_last_update',
+        DateTime.now().millisecondsSinceEpoch,
+      );
     } catch (_) {}
   }
 }
