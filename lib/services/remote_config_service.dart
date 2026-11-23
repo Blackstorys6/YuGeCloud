@@ -18,6 +18,7 @@ class RemoteConfigService {
   /// 建议使用多个 CDN 地址作为备份
   /// TODO: Replace with your own OSS/CDN URLs
   static const List<String> _ossUrls = [
+    'https://panel.yugenb.dpdns.org/app-updates/config/latest.json',
   ];
 
   /// 默认 API 域名（当 OSS 配置获取失败时使用）
@@ -46,48 +47,61 @@ class RemoteConfigService {
 
   /// 获取当前可用的 API 域名
   /// 优化：优先使用内存缓存，避免重复测试域名
-  Future<String> getActiveDomain() async {
-    // 1. 如果内存中已有缓存的活跃域名，直接返回（不重复测试）
-    if (_activeDomain != null && _activeDomain!.isNotEmpty) {
+  Future<String> getActiveDomain({String? excludeDomain}) async {
+    if (_activeDomain != null &&
+        _activeDomain!.isNotEmpty &&
+        _activeDomain != excludeDomain) {
       return _activeDomain!;
     }
 
-    // 2. 从本地存储读取缓存的域名
-    final prefs = await SharedPreferences.getInstance();
-    final cachedDomain = prefs.getString(_activeDomainKey);
-    if (cachedDomain != null && cachedDomain.isNotEmpty) {
-      _activeDomain = cachedDomain;
-      _log('Using local cached domain: $cachedDomain');
-      return cachedDomain;
-    }
-
-    // 3. 没有缓存，尝试从远程配置获取并测试
     final config = await fetchConfig();
     if (config != null && config.domains.isNotEmpty) {
       _log('Remote config fetched, domains: ${config.domains}');
       for (final domain in config.domains) {
+        if (domain == excludeDomain) {
+          _log('Skipping excluded API domain: $domain');
+          continue;
+        }
+        if (!_isValidDomain(domain)) {
+          _log('Rejected invalid domain: $domain');
+          continue;
+        }
         if (await _testDomain(domain)) {
           _log('Domain test passed: $domain');
           await _setActiveDomain(domain);
           return domain;
-        } else {
-          _log('Domain test failed: $domain');
         }
+        _log('Domain test failed: $domain');
       }
     }
 
-    // 4. 所有方法都失败，使用默认域名
-    _log('All methods failed, using default: $_defaultDomain');
+    final prefs = await SharedPreferences.getInstance();
+    final cachedDomain = prefs.getString(_activeDomainKey);
+    if (cachedDomain != null &&
+        cachedDomain != excludeDomain &&
+        _isValidDomain(cachedDomain)) {
+      if (await _testDomain(cachedDomain)) {
+        _log('Using tested local cached domain: $cachedDomain');
+        _activeDomain = cachedDomain;
+        return cachedDomain;
+      }
+    }
+
+    if (_defaultDomain == excludeDomain) {
+      throw StateError('No alternative API domain available');
+    }
+
+    _log('Using default domain: $_defaultDomain');
     _activeDomain = _defaultDomain;
     return _defaultDomain;
   }
 
   /// 强制刷新域名（用于域名失效时）
-  Future<String> refreshActiveDomain() async {
+  Future<String> refreshActiveDomain({String? excludeDomain}) async {
     _activeDomain = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_activeDomainKey);
-    return getActiveDomain();
+    return getActiveDomain(excludeDomain: excludeDomain);
   }
 
   /// 获取远程配置
@@ -102,11 +116,20 @@ class RemoteConfigService {
       }
     }
 
-    // 从 OSS 获取配置
+    // 从 HTTPS 配置源获取配置，并防止版本回退
+    final prefs = await SharedPreferences.getInstance();
+    final storedVersion = prefs.getInt(_configVersionKey) ?? 0;
+
     for (final url in _ossUrls) {
       try {
         final config = await _fetchFromUrl(url);
         if (config != null) {
+          if (config.configVersion < storedVersion) {
+            _log('Rejected config rollback: '
+                '${config.configVersion} < $storedVersion');
+            continue;
+          }
+
           await _saveConfigCache(config);
           _cachedConfig = config;
           return config;
@@ -131,8 +154,7 @@ class RemoteConfigService {
 
     final hasUpdate =
         _compareVersions(currentVersion, platformUpdate.version) < 0;
-    final isForced =
-        platformUpdate.force ||
+    final isForced = platformUpdate.force ||
         (config.update!.minVersion != null &&
             _compareVersions(currentVersion, config.update!.minVersion!) < 0);
 
@@ -185,7 +207,7 @@ class RemoteConfigService {
 
   /// 获取备用订阅地址
   Future<String?> getBackupSubscription() async {
-    final config = await fetchConfig();
+    final config = await fetchConfig(forceRefresh: true);
     return config?.backupSubscription;
   }
 
@@ -201,12 +223,23 @@ class RemoteConfigService {
     final rulesConfig = config?.routingRules;
     if (rulesConfig == null || rulesConfig.url.isEmpty) return null;
 
+    final rulesUri = Uri.tryParse(rulesConfig.url);
+    if (rulesUri == null ||
+        rulesUri.scheme != 'https' ||
+        rulesUri.host.isEmpty ||
+        rulesUri.userInfo.isNotEmpty ||
+        rulesUri.hasQuery ||
+        rulesUri.hasFragment) {
+      _log('Rejected insecure routing rules URL: ${rulesConfig.url}');
+      return null;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final cachedVersion = prefs.getInt('routing_rules_version') ?? 0;
     final cachedContent = prefs.getString('routing_rules_content');
 
     // 优先使用缓存 (如果版本一致)
-    if (cachedContent != null && cachedVersion >= rulesConfig.version) {
+    if (cachedContent != null && cachedVersion == rulesConfig.version) {
       try {
         return jsonDecode(cachedContent) as Map<String, dynamic>;
       } catch (e) {
@@ -216,12 +249,10 @@ class RemoteConfigService {
 
     try {
       _log('Fetching routing rules from: ${rulesConfig.url}');
-      final response = await http
-          .get(
-            Uri.parse(rulesConfig.url),
-            headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
-          )
-          .timeout(const Duration(seconds: 15));
+      final response = await http.get(
+        Uri.parse(rulesConfig.url),
+        headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
+      ).timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
         String content = response.body;
         // 尝试解密 (如果OSS上的文件是加密的)
@@ -245,9 +276,10 @@ class RemoteConfigService {
       _log('Error fetching routing rules: $e');
     }
 
-    // 如果获取失败但有旧缓存，使用旧缓存
-    if (cachedContent != null) {
-      _log('Using fallback cached rules');
+    // 下载失败时，仅允许使用低于远程版本的旧缓存
+    if (cachedContent != null && cachedVersion < rulesConfig.version) {
+      _log('Using older fallback cached rules: '
+          '$cachedVersion < ${rulesConfig.version}');
       try {
         return jsonDecode(cachedContent) as Map<String, dynamic>;
       } catch (_) {}
@@ -261,12 +293,21 @@ class RemoteConfigService {
 
   Future<RemoteConfig?> _fetchFromUrl(String url) async {
     try {
-      final response = await http
-          .get(
-            Uri.parse(url),
-            headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
-          )
-          .timeout(const Duration(seconds: 10));
+      final uri = Uri.tryParse(url);
+      if (uri == null ||
+          uri.scheme != 'https' ||
+          uri.host.isEmpty ||
+          uri.userInfo.isNotEmpty ||
+          uri.hasQuery ||
+          uri.hasFragment) {
+        _log('Rejected insecure config URL: $url');
+        return null;
+      }
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
+      ).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         // 智能解密：支持加密和明文两种格式
         final decryptedBody = ConfigEncryption.smartDecrypt(response.body);
@@ -279,18 +320,31 @@ class RemoteConfigService {
     return null;
   }
 
+  bool _isValidDomain(String domain) {
+    final uri = Uri.tryParse(domain.trim());
+    return uri != null &&
+        uri.scheme == 'https' &&
+        uri.host.isNotEmpty &&
+        uri.userInfo.isEmpty &&
+        (uri.path.isEmpty || uri.path == '/') &&
+        !uri.hasQuery &&
+        !uri.hasFragment;
+  }
+
   Future<bool> _testDomain(String domain) async {
     try {
-      // 简单的健康检查，尝试访问根路径或 /ping
+      if (!_isValidDomain(domain)) {
+        _log('Rejected insecure or invalid API domain: $domain');
+        return false;
+      }
+
       final uri = Uri.parse(domain);
-      final testUrl = uri.replace(path: '/');
-      final response = await http
-          .get(
-            testUrl,
-            headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
-          )
-          .timeout(const Duration(seconds: 5));
-      return response.statusCode < 500;
+      final testUrl = uri.replace(path: '/api/v1/guest/comm/config');
+      final response = await http.get(
+        testUrl,
+        headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
+      ).timeout(const Duration(seconds: 5));
+      return response.statusCode >= 200 && response.statusCode < 300;
     } catch (e) {
       _log('Domain test failed for $domain: $e');
       return false;
@@ -319,7 +373,16 @@ class RemoteConfigService {
       final cached = prefs.getString(_configCacheKey);
       if (cached != null && cached.isNotEmpty) {
         final json = jsonDecode(cached) as Map<String, dynamic>;
-        _cachedConfig = RemoteConfig.fromJson(json);
+        final config = RemoteConfig.fromJson(json);
+        final storedVersion = prefs.getInt(_configVersionKey) ?? 0;
+
+        if (config.configVersion < storedVersion) {
+          _log('Rejected cached config rollback: '
+              '${config.configVersion} < $storedVersion');
+          return null;
+        }
+
+        _cachedConfig = config;
         return _cachedConfig;
       }
     } catch (e) {

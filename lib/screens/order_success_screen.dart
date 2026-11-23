@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/plan.dart';
-import '../theme/app_colors.dart';
 import '../utils/formatters.dart';
-import '../widgets/glow_button.dart';
-import '../widgets/gradient_card.dart';
 
 class OrderSuccessScreen extends StatefulWidget {
   final Plan plan;
@@ -22,14 +19,15 @@ class OrderSuccessScreen extends StatefulWidget {
   State<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
 }
 
-class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTickerProviderStateMixin {
+class _OrderSuccessScreenState extends State<OrderSuccessScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
 
   // Black & Silver Theme Colors
   static const Color _silverPrimary = Color(0xFFE5E7EB); // Gray 200
-  static const Color _silverAccent = Color(0xFF9CA3AF);  // Gray 400
+  static const Color _silverAccent = Color(0xFF9CA3AF); // Gray 400
   // static const Color _silverDim = Color(0xFF4B5563);     // Gray 600
 
   @override
@@ -64,15 +62,24 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
   String _getPeriodLabel(BuildContext context, String key) {
     final l10n = AppLocalizations.of(context);
     switch (key) {
-      case 'month_price': return l10n?.monthPrice ?? 'Monthly';
-      case 'quarter_price': return l10n?.quarterPrice ?? 'Quarterly';
-      case 'half_year_price': return l10n?.halfYearPrice ?? 'Half Yearly';
-      case 'year_price': return l10n?.yearPrice ?? 'Yearly';
-      case 'two_year_price': return l10n?.twoYearPrice ?? '2 Years';
-      case 'three_year_price': return l10n?.threeYearPrice ?? '3 Years';
-      case 'onetime_price': return l10n?.onetimePrice ?? 'One-time';
-      case 'reset_price': return l10n?.resetPrice ?? 'Reset Data';
-      default: return l10n?.subscription ?? 'Subscription';
+      case 'month_price':
+        return l10n?.monthPrice ?? 'Monthly';
+      case 'quarter_price':
+        return l10n?.quarterPrice ?? 'Quarterly';
+      case 'half_year_price':
+        return l10n?.halfYearPrice ?? 'Half Yearly';
+      case 'year_price':
+        return l10n?.yearPrice ?? 'Yearly';
+      case 'two_year_price':
+        return l10n?.twoYearPrice ?? '2 Years';
+      case 'three_year_price':
+        return l10n?.threeYearPrice ?? '3 Years';
+      case 'onetime_price':
+        return l10n?.onetimePrice ?? 'One-time';
+      case 'reset_price':
+        return l10n?.resetPrice ?? 'Reset Data';
+      default:
+        return l10n?.subscription ?? 'Subscription';
     }
   }
 
@@ -88,7 +95,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
               child: Column(
                 children: [
                   const SizedBox(height: 60),
-                  
+
                   // Animated Success Icon (Silver)
                   ScaleTransition(
                     scale: _scaleAnimation,
@@ -118,14 +125,15 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Title Text
                   FadeTransition(
                     opacity: _fadeAnimation,
                     child: Column(
                       children: [
                         Text(
-                          AppLocalizations.of(context)?.orderSuccess ?? 'Payment Successful',
+                          AppLocalizations.of(context)?.orderSuccess ??
+                              'Payment Successful',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 28,
@@ -135,7 +143,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          AppLocalizations.of(context)?.yourSubscriptionActivated ?? 'Your subscription is now active',
+                          AppLocalizations.of(context)
+                                  ?.yourSubscriptionActivated ??
+                              'Your subscription is now active',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.5),
                             fontSize: 14,
@@ -145,9 +155,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 60),
-                  
+
                   // Order Details Card - Black & Silver Style
                   FadeTransition(
                     opacity: _fadeAnimation,
@@ -171,9 +181,12 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      AppLocalizations.of(context)?.purchasedPlan ?? 'Purchased Plan',
+                                      AppLocalizations.of(context)
+                                              ?.purchasedPlan ??
+                                          'Purchased Plan',
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.4),
+                                        color:
+                                            Colors.white.withValues(alpha: 0.4),
                                         fontSize: 12,
                                         letterSpacing: 0.5,
                                       ),
@@ -191,7 +204,8 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(20),
@@ -210,12 +224,12 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                               ),
                             ],
                           ),
-                          
+
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 24),
                             child: Divider(color: Colors.white10),
                           ),
-                          
+
                           // Info Rows
                           _buildInfoRow(
                             context,
@@ -234,9 +248,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 60),
-                  
+
                   // Action Button - Silver Gradient
                   FadeTransition(
                     opacity: _fadeAnimation,
@@ -268,7 +282,8 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                           borderRadius: BorderRadius.circular(16),
                           child: Center(
                             child: Text(
-                              AppLocalizations.of(context)?.startUsing ?? 'Start Using',
+                              AppLocalizations.of(context)?.startUsing ??
+                                  'Start Using',
                               style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 16,
@@ -290,7 +305,8 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
     );
   }
 
-  Widget _buildInfoRow(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildInfoRow(
+      BuildContext context, String label, String value, IconData icon) {
     return Row(
       children: [
         Container(

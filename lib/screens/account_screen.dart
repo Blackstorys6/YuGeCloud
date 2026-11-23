@@ -25,12 +25,14 @@ class AccountScreen extends StatefulWidget {
   final String connectionStatus;
   final String connectionState;
   final int reloadToken;
+  final bool inviteEnabled;
   const AccountScreen({
     super.key,
     required this.onLogout,
     required this.connectionStatus,
     required this.connectionState,
     this.reloadToken = 0,
+    this.inviteEnabled = true,
   });
 
   @override

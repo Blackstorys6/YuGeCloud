@@ -200,6 +200,15 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _checkAuth() async {
+    // 优先初始化远程配置，确保首次 API 请求使用正确域名
+    try {
+      await RemoteConfigService().getActiveDomain();
+      debugPrint('[AuthGate] Remote config initialized');
+    } catch (e) {
+      debugPrint('[AuthGate] Remote config initialization failed: $e');
+      // 远程配置失败不阻止登录，继续使用默认域名
+    }
+
     await _config.refreshAuthCache();
     final token = await _config.getToken();
     final authData = await _config.getAuthData();

@@ -4,6 +4,7 @@ import 'package:encrypt/encrypt.dart' as encrypt_pkg;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'api_config.dart';
+import 'remote_config_service.dart';
 import '../models/invite_data.dart';
 import '../utils/user_agent_utils.dart';
 
@@ -260,6 +261,7 @@ class V2BoardApi {
       query: query,
       withAuth: withAuth,
       didRetry: false,
+      didFailover: false,
     );
   }
 
@@ -268,12 +270,15 @@ class V2BoardApi {
     required Map<String, String>? query,
     required bool withAuth,
     required bool didRetry,
+    required bool didFailover,
   }) async {
     int retryCount = 0;
     const maxRetries = 2;
     while (true) {
+      Uri? failedUri;
       try {
         final uri = await _buildUri(path, query);
+        failedUri = uri;
         final headers = await _headers(withAuth: withAuth);
         _log('GET', uri.toString(), headers: headers);
         final response = await http
@@ -294,10 +299,28 @@ class V2BoardApi {
             query: query,
             withAuth: withAuth,
             didRetry: true,
+            didFailover: didFailover,
           );
         }
         return _handle(response, context: uri.toString());
       } catch (e) {
+        if (!didFailover &&
+            failedUri != null &&
+            (e is HandshakeException || e is SocketException)) {
+          final failedDomain = failedUri.origin;
+          _log(
+              'FAILOVER', 'API domain failed: $failedDomain; switching domain');
+          final newDomain = await RemoteConfigService()
+              .refreshActiveDomain(excludeDomain: failedDomain);
+          _log('FAILOVER', 'Switched API domain to: $newDomain');
+          return _getWithRetry(
+            path,
+            query: query,
+            withAuth: withAuth,
+            didRetry: didRetry,
+            didFailover: true,
+          );
+        }
         if (retryCount < maxRetries &&
             (e is HandshakeException || e is SocketException)) {
           retryCount++;
