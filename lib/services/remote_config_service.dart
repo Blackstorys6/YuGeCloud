@@ -87,13 +87,16 @@ class RemoteConfigService {
       }
     }
 
-    if (_defaultDomain == excludeDomain) {
-      throw StateError('No alternative API domain available');
+    if (_defaultDomain != excludeDomain &&
+        _isValidDomain(_defaultDomain) &&
+        await _testDomain(_defaultDomain)) {
+      _log('Using verified default domain: $_defaultDomain');
+      await _setActiveDomain(_defaultDomain);
+      return _defaultDomain;
     }
 
-    _log('Using default domain: $_defaultDomain');
-    _activeDomain = _defaultDomain;
-    return _defaultDomain;
+    _activeDomain = null;
+    throw StateError('No healthy API domain available');
   }
 
   /// 强制刷新域名（用于域名失效时）

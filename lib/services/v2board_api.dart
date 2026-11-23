@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:encrypt/encrypt.dart' as encrypt_pkg;
@@ -306,7 +307,9 @@ class V2BoardApi {
       } catch (e) {
         if (!didFailover &&
             failedUri != null &&
-            (e is HandshakeException || e is SocketException)) {
+            (e is HandshakeException ||
+                e is SocketException ||
+                e is TimeoutException)) {
           final failedDomain = failedUri.origin;
           _log(
               'FAILOVER', 'API domain failed: $failedDomain; switching domain');
@@ -322,7 +325,9 @@ class V2BoardApi {
           );
         }
         if (retryCount < maxRetries &&
-            (e is HandshakeException || e is SocketException)) {
+            (e is HandshakeException ||
+                e is SocketException ||
+                e is TimeoutException)) {
           retryCount++;
           _log('RETRY', 'Attempt $retryCount failed for $path: $e');
           await Future.delayed(Duration(seconds: 1 * retryCount));
