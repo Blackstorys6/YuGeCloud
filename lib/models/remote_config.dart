@@ -1,5 +1,5 @@
-/// 远程配置数据模型
-/// OSS 配置文件的 Dart 映射
+// 远程配置数据模型
+// OSS 配置文件的 Dart 映射
 
 class RemoteConfig {
   final int configVersion;

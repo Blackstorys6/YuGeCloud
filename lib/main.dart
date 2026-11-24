@@ -20,6 +20,8 @@ import 'theme/app_theme.dart';
 import 'theme/app_theme_controller.dart';
 import 'utils/asset_utils.dart';
 import 'widgets/flux_splash.dart';
+import 'widgets/app_update_dialog.dart';
+import 'services/update_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -188,6 +190,7 @@ class _AuthGateState extends State<AuthGate> {
   final _config = ApiConfig();
   bool _authed = false;
   bool _isChecking = true;
+  bool _hasShownUpdateDialog = false;
   final _startTime = DateTime.now();
 
   // 最小启动动画时间（毫秒）- 让动画至少播放这么久
@@ -254,6 +257,26 @@ class _AuthGateState extends State<AuthGate> {
         _authed = authResult;
         _isChecking = false;
       });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkForAppUpdate();
+      });
+    }
+  }
+
+  Future<void> _checkForAppUpdate() async {
+    if (kIsWeb || !Platform.isAndroid || _hasShownUpdateDialog) return;
+
+    try {
+      final update = await UpdateService.instance.checkForUpdate();
+
+      if (!mounted || update == null || !update.hasUpdate) return;
+
+      _hasShownUpdateDialog = true;
+
+      await showAppUpdateDialog(context, update);
+    } catch (e) {
+      debugPrint('[AutoUpdate] Update check failed: $e');
     }
   }
 
