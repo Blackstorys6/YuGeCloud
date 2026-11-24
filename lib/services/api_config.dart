@@ -89,17 +89,54 @@ class ApiConfig {
   }
 
   Future<void> clearAuth() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_authDataKey);
-    await _secureStorage.delete(key: _tokenKey);
-    await _secureStorage.delete(key: _authDataKey);
+    final failures = <String>[];
+    SharedPreferences? prefs;
+
+    try {
+      prefs = await SharedPreferences.getInstance();
+    } catch (_) {
+      failures.add('SharedPreferences 初始化');
+    }
+
+    if (prefs != null) {
+      final storage = prefs;
+      try {
+        await storage.remove(_tokenKey);
+      } catch (_) {
+        failures.add('旧 Token 清理');
+      }
+
+      try {
+        await storage.remove(_authDataKey);
+      } catch (_) {
+        failures.add('旧 AuthData 清理');
+      }
+    }
+
+    try {
+      await _secureStorage.delete(key: _tokenKey);
+    } catch (_) {
+      failures.add('安全存储 Token 清理');
+    }
+
+    try {
+      await _secureStorage.delete(key: _authDataKey);
+    } catch (_) {
+      failures.add('安全存储 AuthData 清理');
+    }
 
     _tokenCache = null;
     _authDataCache = null;
 
-    // 清除用户数据缓存
-    UserDataService().clearCache();
+    try {
+      UserDataService().clearCache();
+    } catch (_) {
+      failures.add('用户数据缓存清理');
+    }
+
+    if (failures.isNotEmpty) {
+      throw StateError('认证数据清理未完全完成：${failures.join('、')}');
+    }
   }
 
   Future<void> refreshAuthCache() async {
