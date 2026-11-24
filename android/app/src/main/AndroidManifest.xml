@@ -18,7 +18,10 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:extractNativeLibs="true"
-        android:enableOnBackInvokedCallback="true">
+        android:enableOnBackInvokedCallback="true"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <!-- MainActivity 是唯一的启动器，Flutter 内部处理启动动画 -->
         <activity
             android:name="com.example.flux.MainActivity"
