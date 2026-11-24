@@ -51,16 +51,18 @@ class ApiConfig {
   }
 
   Future<void> setToken(String? token) async {
-    _tokenCache = token;
+    final prefs = await SharedPreferences.getInstance();
+
     if (token == null || token.isEmpty) {
-      await _secureStorage.delete(key: _tokenKey);
-      final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_tokenKey);
+      await _secureStorage.delete(key: _tokenKey);
+      _tokenCache = null;
       return;
     }
+
     await _secureStorage.write(key: _tokenKey, value: token);
-    final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
+    _tokenCache = token;
   }
 
   Future<String?> getAuthData() async {
@@ -72,26 +74,29 @@ class ApiConfig {
   }
 
   Future<void> setAuthData(String? value) async {
-    _authDataCache = value;
+    final prefs = await SharedPreferences.getInstance();
+
     if (value == null || value.isEmpty) {
-      await _secureStorage.delete(key: _authDataKey);
-      final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_authDataKey);
+      await _secureStorage.delete(key: _authDataKey);
+      _authDataCache = null;
       return;
     }
+
     await _secureStorage.write(key: _authDataKey, value: value);
-    final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_authDataKey);
+    _authDataCache = value;
   }
 
   Future<void> clearAuth() async {
-    _tokenCache = null;
-    _authDataCache = null;
-    await _secureStorage.delete(key: _tokenKey);
-    await _secureStorage.delete(key: _authDataKey);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_authDataKey);
+    await _secureStorage.delete(key: _tokenKey);
+    await _secureStorage.delete(key: _authDataKey);
+
+    _tokenCache = null;
+    _authDataCache = null;
 
     // 清除用户数据缓存
     UserDataService().clearCache();
