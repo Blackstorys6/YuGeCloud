@@ -633,7 +633,13 @@ class MainActivity : FlutterActivity() {
             if (customRules != null && customRules.length() > 0) {
                  Log.d(TAG, "Applying ${customRules.length()} custom routing rules")
                  for (i in 0 until customRules.length()) {
-                     rules.put(customRules.getJSONObject(i))
+                     val rule = customRules.getJSONObject(i)
+                     val isCatchAllProxy = rule.optString("outboundTag") == "proxy" &&
+                         rule.optString("network") == "tcp,udp" &&
+                         !rule.has("domain") && !rule.has("ip") && !rule.has("port")
+                     if (!isCatchAllProxy) {
+                         rules.put(rule)
+                     }
                  }
                  hasCustomRules = true
             }

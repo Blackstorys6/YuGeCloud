@@ -566,6 +566,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent, // Important for glass effect
       barrierColor: Colors.black54, // Ensure barrier is visible and interactive
       isDismissible: true,
