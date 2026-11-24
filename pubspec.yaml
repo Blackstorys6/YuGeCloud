@@ -53,6 +53,8 @@ dependencies:
   crisp_chat: ^2.4.3          # Customer support chat (iOS/Android only)
   encrypt: ^5.0.3             # AES encryption for API requests
   flutter_markdown_plus: ^1.0.12
+  package_info_plus: ^9.0.1
+  crypto: ^3.0.8
 
 dev_dependencies:
   flutter_test:

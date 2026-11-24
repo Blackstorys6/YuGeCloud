@@ -176,6 +176,7 @@ class RemoteConfigService {
       downloadUrl: platformUpdate.url,
       isForced: isForced,
       changelog: config.update!.changelog,
+      sha256: platformUpdate.sha256,
     );
   }
 
@@ -438,6 +439,7 @@ class UpdateCheckResult {
   final String? downloadUrl;
   final bool isForced;
   final String? changelog;
+  final String? sha256;
 
   UpdateCheckResult({
     required this.hasUpdate,
@@ -445,5 +447,6 @@ class UpdateCheckResult {
     this.downloadUrl,
     this.isForced = false,
     this.changelog,
+    this.sha256,
   });
 }
