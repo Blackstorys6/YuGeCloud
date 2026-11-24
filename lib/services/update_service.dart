@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
+
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -17,6 +19,40 @@ class UpdateService {
   static final UpdateService instance = UpdateService._();
 
   bool _isDownloading = false;
+
+  static const MethodChannel _updateChannel =
+      MethodChannel('com.yugenb/app_update');
+
+  /// 检查 Android 是否允许安装外部 APK。
+  Future<bool> canInstallPackages() async {
+    if (!Platform.isAndroid) return false;
+    return await _updateChannel.invokeMethod<bool>(
+          'canInstallPackages',
+        ) ??
+        false;
+  }
+
+  /// 打开 Android 安装未知应用的授权设置。
+  Future<void> openInstallSettings() async {
+    if (!Platform.isAndroid) {
+      throw UnsupportedError('仅支持 Android');
+    }
+    await _updateChannel.invokeMethod<bool>('openInstallSettings');
+  }
+
+  /// 将已校验的 APK 交给 Android 系统安装。
+  Future<void> installApk(String apkPath) async {
+    if (!Platform.isAndroid) {
+      throw UnsupportedError('仅支持 Android');
+    }
+    if (apkPath.trim().isEmpty) {
+      throw ArgumentError('APK 路径不能为空');
+    }
+    await _updateChannel.invokeMethod<bool>(
+      'installApk',
+      {'path': apkPath},
+    );
+  }
 
   /// 获取当前 App 版本并检查远程更新。
   Future<UpdateCheckResult?> checkForUpdate() async {

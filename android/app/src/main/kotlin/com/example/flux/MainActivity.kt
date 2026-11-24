@@ -20,6 +20,9 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.atomic.AtomicLong
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.content.FileProvider
+import android.net.Uri
+import android.provider.Settings
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.flux/v2ray"
@@ -117,6 +120,77 @@ class MainActivity : FlutterActivity() {
                     vpnStatusSink = null
                 }
             })
+
+        setupUpdateChannel(flutterEngine)
+    }
+
+    private val UPDATE_CHANNEL = "com.yugenb/app_update"
+
+    private fun setupUpdateChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            UPDATE_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "canInstallPackages" -> {
+                    result.success(
+                        Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                            packageManager.canRequestPackageInstalls()
+                    )
+                }
+                "openInstallSettings" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val intent = Intent(
+                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:$packageName")
+                        )
+                        startActivity(intent)
+                    }
+                    result.success(true)
+                }
+                "installApk" -> {
+                    val apkPath = call.argument<String>("path")
+                    if (apkPath.isNullOrBlank()) {
+                        result.error("INVALID_PATH", "APK path is empty", null)
+                    } else {
+                        val apkFile = File(apkPath)
+                        if (!apkFile.exists() || !apkFile.isFile) {
+                            result.error("APK_NOT_FOUND", "APK file does not exist", null)
+                        } else if (
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                            !packageManager.canRequestPackageInstalls()
+                        ) {
+                            result.error(
+                                "INSTALL_PERMISSION_REQUIRED",
+                                "Allow this app to install unknown apps first",
+                                null
+                            )
+                        } else {
+                            try {
+                                val apkUri = FileProvider.getUriForFile(
+                                    this,
+                                    "$packageName.updatefileprovider",
+                                    apkFile
+                                )
+                                val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(
+                                        apkUri,
+                                        "application/vnd.android.package-archive"
+                                    )
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                startActivity(installIntent)
+                                result.success(true)
+                            } catch (e: Exception) {
+                                result.error("INSTALL_FAILED", e.message, null)
+                            }
+                        }
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
