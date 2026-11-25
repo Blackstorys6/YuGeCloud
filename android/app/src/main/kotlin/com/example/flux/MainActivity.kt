@@ -625,35 +625,34 @@ class MainActivity : FlutterActivity() {
         // 6.3 Mode Handling
         if (routingMode == "global") {
             // Global Mode: Only bypass private/LAN
-             rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
-             rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
+            rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
+            rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
         } else {
-            // Rule Mode
-            var hasCustomRules = false
-            if (customRules != null && customRules.length() > 0) {
-                 Log.d(TAG, "Applying ${customRules.length()} custom routing rules")
-                 for (i in 0 until customRules.length()) {
-                     val rule = customRules.getJSONObject(i)
-                     val isCatchAllProxy = rule.optString("outboundTag") == "proxy" &&
-                         rule.optString("network") == "tcp,udp" &&
-                         !rule.has("domain") && !rule.has("ip") && !rule.has("port")
-                     if (!isCatchAllProxy) {
-                         rules.put(rule)
-                     }
-                 }
-                 hasCustomRules = true
+            // Rule Mode: Domestic traffic takes priority over remote custom rules
+            rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
+            rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
+
+            val geoip = File(filesDir, "geoip.dat")
+            val geosite = File(filesDir, "geosite.dat")
+            if (geoip.exists() && geosite.exists()) {
+                rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:cn")))
+                rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:cn")))
+                Log.d(TAG, "Domestic direct rules enabled")
+            } else {
+                Log.w(TAG, "GeoIP/GeoSite assets missing; domestic direct rules unavailable")
             }
-            
-            // 无论有没有自定义规则, 都追加默认的内网 + 国内直连规则
-            if (true) {
-                Log.d(TAG, "Applying default routing rules")
-                 rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
-                 rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
-                 
-                val geoip = File(filesDir, "geoip.dat")
-                if (geoip.exists() && File(filesDir, "geosite.dat").exists()) {
-                    rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:cn")))
-                    rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:cn")))
+
+            // Apply remote custom rules after domestic direct rules
+            if (customRules != null && customRules.length() > 0) {
+                Log.d(TAG, "Applying ${customRules.length()} custom routing rules")
+                for (i in 0 until customRules.length()) {
+                    val rule = customRules.getJSONObject(i)
+                    val isCatchAllProxy = rule.optString("outboundTag") == "proxy" &&
+                        rule.optString("network") == "tcp,udp" &&
+                        !rule.has("domain") && !rule.has("ip") && !rule.has("port")
+                    if (!isCatchAllProxy) {
+                        rules.put(rule)
+                    }
                 }
             }
         }

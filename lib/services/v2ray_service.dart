@@ -155,8 +155,8 @@ class V2rayService {
     // 2. 移动端处理 (Android / iOS)
     if (Platform.isFuchsia) return false;
 
-    await _ensureMobileAssets();
     try {
+      await _ensureMobileAssets();
       final resolvedNode = await _resolveServerAddress(node);
       final outboundConfig = resolvedNode.toV2rayConfig();
 
@@ -761,16 +761,34 @@ class V2rayService {
   /// 确保移动端资源 (Android)
   Future<void> _ensureMobileAssets() async {
     if (!Platform.isAndroid) return;
-    try {
-      final dir = await getApplicationSupportDirectory();
-      for (final file in ['geoip.dat', 'geosite.dat']) {
-        final f = File('${dir.path}/$file');
-        if (!await f.exists()) {
-          final data = await rootBundle.load('assets/bin/$file');
-          await f.writeAsBytes(data.buffer.asUint8List(), flush: true);
-        }
+
+    final dir = await getApplicationSupportDirectory();
+
+    for (final file in ['geoip.dat', 'geosite.dat']) {
+      final target = File('${dir.path}/$file');
+      final data = await rootBundle.load('assets/bin/$file');
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+
+      final exists = await target.exists();
+      final currentLength = exists ? await target.length() : -1;
+
+      if (!exists || currentLength != bytes.length) {
+        await target.writeAsBytes(bytes, flush: true);
       }
-    } catch (_) {}
+
+      final finalLength = await target.length();
+      if (finalLength != bytes.length) {
+        throw StateError(
+          '移动端资源校验失败: $file, '
+          'expected=${bytes.length}, actual=$finalLength',
+        );
+      }
+
+      print('[V2rayService] Asset ready: $file ($finalLength bytes)');
+    }
   }
 
   Future<ServerNode> _resolveServerAddress(ServerNode node) async {

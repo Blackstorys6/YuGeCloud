@@ -15,7 +15,6 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -33,18 +32,9 @@ class FluxVpnService : VpnService() {
     @Volatile private var networkCallbackRegistered = false
     private var tun2SocksService: Tun2SocksControl? = null
     private val connectivity by lazy { getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager }
-    private val defaultNetworkRequest by lazy {
-        NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
-            .build()
-    }
-    @Volatile private var trackedUnderlyingNetwork: Network? = null
-
     private val defaultNetworkCallback by lazy {
         object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                trackedUnderlyingNetwork = network
                 updateUnderlyingNetworks(arrayOf(network))
             }
 
@@ -52,15 +42,11 @@ class FluxVpnService : VpnService() {
                 network: Network,
                 networkCapabilities: NetworkCapabilities
             ) {
-                trackedUnderlyingNetwork = network
                 updateUnderlyingNetworks(arrayOf(network))
             }
 
             override fun onLost(network: Network) {
-                if (trackedUnderlyingNetwork == network) {
-                    trackedUnderlyingNetwork = null
-                    updateUnderlyingNetworks(null)
-                }
+                updateUnderlyingNetworks(null)
             }
         }
     }
@@ -382,11 +368,11 @@ class FluxVpnService : VpnService() {
             !networkCallbackRegistered
         ) {
             try {
-                connectivity.requestNetwork(defaultNetworkRequest, defaultNetworkCallback)
+                connectivity.registerDefaultNetworkCallback(defaultNetworkCallback)
                 networkCallbackRegistered = true
-                Log.d(TAG, "Default network request registered")
+                Log.d(TAG, "Default network callback registered")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to request default network", e)
+                Log.e(TAG, "Failed to register default network callback", e)
             }
         }
     }
