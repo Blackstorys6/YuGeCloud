@@ -757,7 +757,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
       backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: false,
       extendBody: true,
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: false,
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,

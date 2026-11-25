@@ -87,7 +87,7 @@ class _PlansScreenState extends State<PlansScreen> {
         final plans = snapshot.data!;
         return StaggeredList(
           padding: EdgeInsets.only(
-            top: MediaQuery.paddingOf(context).top + kToolbarHeight + 2,
+            top: 16,
             left: 20,
             right: 20,
             bottom: 100,

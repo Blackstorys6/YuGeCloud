@@ -246,7 +246,7 @@ class _AccountScreenState extends State<AccountScreen> {
           staggerDelay: Duration.zero,
           animationDuration: Duration.zero,
           padding: EdgeInsets.only(
-            top: MediaQuery.paddingOf(context).top + kToolbarHeight + 2,
+            top: 16,
             left: 16,
             right: 16,
             bottom: 100,
