@@ -576,9 +576,9 @@ class MainActivity : FlutterActivity() {
         domesticDns.put("expectIPs", org.json.JSONArray().put("geoip:cn"))
         dnsServers.put(domesticDns)
 
-        // Foreign DNS: DoH, 查询经代理发出
-        dnsServers.put("https://1.1.1.1/dns-query")
-        dnsServers.put("https://8.8.8.8/dns-query")
+        // Foreign DNS
+        dnsServers.put("8.8.8.8")
+        dnsServers.put("1.1.1.1")
         dnsServers.put("localhost")
         
         dns.put("servers", dnsServers)
@@ -620,15 +620,16 @@ class MainActivity : FlutterActivity() {
             }
         }
         
-        // 6.2 (已移除) 不再让 8.8.8.8 / 1.1.1.1 直连, 国外 DNS 查询走代理
-        
+        // 6.2 (已移除) 不再让 8.8.8.8 / 1.1.1.1 直连, 国外         // 6.2 DNS Loop Break
+        rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("8.8.8.8").put("1.1.1.1")))
+
         // 6.3 Mode Handling
         if (routingMode == "global") {
             // Global Mode: Only bypass private/LAN
             rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
             rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
         } else {
-            // Rule Mode: restore 2026-11-22 rule priority
+            // Rule Mode
             var hasCustomRules = false
             if (customRules != null && customRules.length() > 0) {
                 Log.d(TAG, "Applying ${customRules.length()} custom routing rules")
@@ -638,22 +639,21 @@ class MainActivity : FlutterActivity() {
                 hasCustomRules = true
             }
 
-            // Append private and domestic direct rules after remote custom rules
-            if (true) {
+            // Fallback default rules if no custom rules provided
+            if (!hasCustomRules) {
                 Log.d(TAG, "Applying default routing rules")
                 rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
                 rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
 
                 val geoip = File(filesDir, "geoip.dat")
-                if (geoip.exists() && File(filesDir, "geosite.dat").exists()) {
+                if (geoip.exists()) {
                     rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:cn")))
                     rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:cn")))
                 }
             }
         }
 
-        // Final Catch-all Proxy
-        rules.put(JSONObject().put("type", "field").put("outboundTag", "proxy").put("network", "tcp,udp"))
+(JSONObject().put("type", "field").put("outboundTag", "proxy").put("network", "tcp,udp"))
         
         routing.put("rules", rules)
         config.put("routing", routing)
