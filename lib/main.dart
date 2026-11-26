@@ -17,11 +17,8 @@ import 'services/user_data_service.dart';
 import 'services/v2board_api.dart';
 import 'services/v2ray_service.dart';
 import 'theme/app_theme.dart';
-import 'theme/app_theme_controller.dart';
 import 'utils/asset_utils.dart';
 import 'widgets/flux_splash.dart';
-import 'widgets/app_update_dialog.dart';
-import 'services/update_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,8 +93,6 @@ void main() async {
     });
   }
 
-  await AppThemeController.instance.load();
-
   runApp(const FluxApp());
 }
 
@@ -155,25 +150,19 @@ class FluxApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: AppThemeController.instance,
-      builder: (context, _) {
-        return MaterialApp(
-          title: '屿哥云',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
-          themeMode: AppThemeController.instance.themeMode,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const AuthGate(),
-        );
-      },
+    return MaterialApp(
+      title: '屿哥云',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.dark(),
+      themeMode: ThemeMode.dark,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const AuthGate(),
     );
   }
 }
@@ -190,7 +179,6 @@ class _AuthGateState extends State<AuthGate> {
   final _config = ApiConfig();
   bool _authed = false;
   bool _isChecking = true;
-  bool _hasShownUpdateDialog = false;
   final _startTime = DateTime.now();
 
   // 最小启动动画时间（毫秒）- 让动画至少播放这么久
@@ -203,15 +191,6 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _checkAuth() async {
-    // 优先初始化远程配置，确保首次 API 请求使用正确域名
-    try {
-      await RemoteConfigService().getActiveDomain();
-      debugPrint('[AuthGate] Remote config initialized');
-    } catch (e) {
-      debugPrint('[AuthGate] Remote config initialization failed: $e');
-      // 远程配置失败不阻止登录，继续使用默认域名
-    }
-
     await _config.refreshAuthCache();
     final token = await _config.getToken();
     final authData = await _config.getAuthData();
@@ -257,26 +236,6 @@ class _AuthGateState extends State<AuthGate> {
         _authed = authResult;
         _isChecking = false;
       });
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _checkForAppUpdate();
-      });
-    }
-  }
-
-  Future<void> _checkForAppUpdate() async {
-    if (kIsWeb || !Platform.isAndroid || _hasShownUpdateDialog) return;
-
-    try {
-      final update = await UpdateService.instance.checkForUpdate();
-
-      if (!mounted || update == null || !update.hasUpdate) return;
-
-      _hasShownUpdateDialog = true;
-
-      await showAppUpdateDialog(context, update);
-    } catch (e) {
-      debugPrint('[AutoUpdate] Update check failed: $e');
     }
   }
 

@@ -9,7 +9,7 @@ import '../models/notice.dart';
 import '../theme/app_colors.dart';
 
 AppPalette _noticePalette(BuildContext context) =>
-    Theme.of(context).extension<AppPalette>() ?? AppPalette.light;
+    Theme.of(context).extension<AppPalette>() ?? AppPalette.dark;
 
 Future<void> showNoticeDialog(BuildContext context, Notice notice) {
   return showGeneralDialog<void>(

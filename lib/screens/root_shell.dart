@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/plan.dart';
 import '../models/notice.dart';
+import '../services/latency_test_service.dart';
 import '../services/subscription_service.dart';
 
 import '../services/unified_vpn_service.dart';
@@ -12,6 +13,7 @@ import '../services/tray_service.dart';
 import '../services/remote_config_service.dart'; // Added
 import '../services/user_data_service.dart'; // Added
 import '../models/server_node.dart';
+import '../theme/app_colors.dart';
 import 'account_screen.dart';
 import 'home_dashboard.dart';
 import 'plans_screen.dart';
@@ -47,13 +49,8 @@ class _RootShellState extends State<RootShell> with WindowListener {
   bool _isSwitching = false;
   int _accountReload = 0;
   bool _isConnecting = false;
-  bool _isLoggingOut = false;
-  int _connectionGeneration = 0;
+  List<ServerNode>? _nodesCache;
   bool _isInitializing = true; // 全局初始化状态
-  bool _isMaintenanceMode = false;
-  String? _maintenanceMessage;
-  bool _purchaseEnabled = true;
-  bool _inviteEnabled = true;
   bool _isNoticeDialogOpen = false;
 
   // Lazy loading: 跟踪哪些页面已经被访问
@@ -78,20 +75,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
     }
   }
 
-  bool _isConnectionAttemptCurrent(int generation) {
-    return mounted && !_isLoggingOut && generation == _connectionGeneration;
-  }
-
-  void _beginLogout() {
-    _isLoggingOut = true;
-    _connectionGeneration++;
-  }
-
-  void _cancelLogout() {
-    _connectionGeneration++;
-    _isLoggingOut = false;
-  }
-
   /// 统一初始化所有关键数据
   Future<void> _initApp() async {
     try {
@@ -104,37 +87,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
       // 3. 核心网络配置 (获取并缓存最快域名)
       await RemoteConfigService().getActiveDomain();
 
-      // 4. 检查远程维护模式；配置服务异常时不阻断 App 启动
-      try {
-        final maintenance = await RemoteConfigService().checkMaintenance();
-        if (maintenance != null) {
-          if (mounted) {
-            setState(() {
-              _isMaintenanceMode = true;
-              _maintenanceMessage = maintenance.message;
-              _isInitializing = false;
-            });
-          }
-          return;
-        }
-      } catch (e) {
-        debugPrint('Maintenance config check failed: $e');
-      }
-
-      // 5. 获取远程功能开关；读取失败时默认保持购买功能开启
-      try {
-        final flags = await RemoteConfigService().getFeatureFlags();
-        if (mounted) {
-          setState(() {
-            _purchaseEnabled = flags.purchaseEnabled;
-            _inviteEnabled = flags.inviteEnabled;
-          });
-        }
-      } catch (e) {
-        debugPrint('Feature flags loading failed: $e');
-      }
-
-      // 6. ✅ 仅加载 Home 页需要的数据（公告）
+      // 4. ✅ 仅加载 Home 页需要的数据（公告）
       // 其他页面数据将在用户切换到对应 tab 时才加载
       await Future.wait([
         UserDataService().getNotices(), // Home 页公告
@@ -273,7 +226,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
   }
 
   void _onVpnStatusChanged(bool isConnected) {
-    if (!mounted || _isLoggingOut) return;
+    if (!mounted) return;
     if (!isConnected && _status == ShellStatus.connected) {
       setState(() {
         _status = ShellStatus.disconnected;
@@ -349,8 +302,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
   Future<void> _toggleConnection() async {
     // ??????????????????
-    if (_isLoggingOut || _isConnecting || !mounted) return;
-    final generation = _connectionGeneration;
+    if (_isConnecting) return;
 
     _isConnecting = true;
     try {
@@ -361,7 +313,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
               AppLocalizations.of(context)?.disconnecting ?? '????????????...';
         });
         await _vpnService.disconnect();
-        if (!_isConnectionAttemptCurrent(generation)) return;
         setState(() {
           _status = ShellStatus.disconnected;
           _connectedNodeName = null;
@@ -372,7 +323,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
         await _connectWithLastNode();
       }
     } catch (e) {
-      if (!_isConnectionAttemptCurrent(generation)) return;
       setState(() {
         _status = ShellStatus.error;
         _statusMessage =
@@ -384,8 +334,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
   }
 
   Future<void> _reconnectConnection() async {
-    if (_isLoggingOut || _isConnecting || !mounted) return;
-    final generation = _connectionGeneration;
+    if (_isConnecting) return;
     _isConnecting = true;
 
     try {
@@ -402,10 +351,8 @@ class _RootShellState extends State<RootShell> with WindowListener {
         } catch (_) {}
       }
 
-      if (!_isConnectionAttemptCurrent(generation)) return;
       await _connectWithLastNode();
     } catch (e) {
-      if (!_isConnectionAttemptCurrent(generation)) return;
       setState(() {
         _status = ShellStatus.error;
         _statusMessage =
@@ -417,8 +364,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
   }
 
   Future<void> _connectWithLastNode() async {
-    if (_isLoggingOut || !mounted) return;
-    final generation = _connectionGeneration;
     setState(() {
       _status = ShellStatus.connecting;
       _connectedNodeName = null;
@@ -427,17 +372,14 @@ class _RootShellState extends State<RootShell> with WindowListener {
     });
 
     try {
-      final fetchNodesTimeoutMessage =
-          AppLocalizations.of(context)?.fetchNodesTimeout ??
-              '??????????????????';
-
       // ??????????????????
       final nodes = await _subscriptionService.fetchNodes().timeout(
             const Duration(seconds: 15),
-            onTimeout: () => throw Exception(fetchNodesTimeoutMessage),
+            onTimeout: () => throw Exception(
+              AppLocalizations.of(context)?.fetchNodesTimeout ??
+                  '??????????????????',
+            ),
           );
-
-      if (!_isConnectionAttemptCurrent(generation)) return;
 
       if (nodes.isEmpty) {
         setState(() {
@@ -451,7 +393,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
 
       // ???????????????????????????
       final prefs = await SharedPreferences.getInstance();
-      if (!_isConnectionAttemptCurrent(generation)) return;
       final lastNodeName = prefs.getString('last_node_name');
 
       ServerNode targetNode;
@@ -476,16 +417,9 @@ class _RootShellState extends State<RootShell> with WindowListener {
       });
 
       // ???????????????????????????
-      if (!_isConnectionAttemptCurrent(generation)) return;
-
       final success = await _vpnService
           .connect(targetNode)
           .timeout(const Duration(seconds: 30), onTimeout: () => false);
-
-      if (!_isConnectionAttemptCurrent(generation)) {
-        if (success) await _vpnService.disconnect();
-        return;
-      }
 
       // ???????????????????????????
       if (success) {
@@ -500,7 +434,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
             : AppLocalizations.of(context)?.connectionFailed ?? '????????????';
       });
     } catch (e) {
-      if (!_isConnectionAttemptCurrent(generation)) return;
       setState(() {
         _status = ShellStatus.error;
         _connectedNodeName = null;
@@ -511,8 +444,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
   }
 
   Future<void> _connectNode(ServerNode node) async {
-    if (_isLoggingOut || _isConnecting || !mounted) return;
-    final generation = _connectionGeneration;
+    if (_isConnecting) return;
     _isConnecting = true;
     setState(() {
       _status = ShellStatus.connecting;
@@ -522,13 +454,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
     });
     try {
       await _vpnService.disconnect();
-      if (!_isConnectionAttemptCurrent(generation)) return;
       final success = await _vpnService.connect(node);
-
-      if (!_isConnectionAttemptCurrent(generation)) {
-        if (success) await _vpnService.disconnect();
-        return;
-      }
 
       // 保存手动选择的节点
       if (success) {
@@ -544,7 +470,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
             : AppLocalizations.of(context)?.connectionFailed ?? '连接失败';
       });
     } catch (e) {
-      if (!_isConnectionAttemptCurrent(generation)) return;
       setState(() {
         _status = ShellStatus.error;
         _connectedNodeName = null;
@@ -555,10 +480,10 @@ class _RootShellState extends State<RootShell> with WindowListener {
     }
   }
 
-  final bool _isLoadingNodes = false;
+  bool _isLoadingNodes = false;
 
   Future<void> _showNodePicker() async {
-    if (_isLoggingOut || _isConnecting) return;
+    if (_isConnecting) return;
 
     // We don't need _isLoadingNodes anymore since NodePickerSheet handles it
     // But we keep the check to prevent opening while connecting
@@ -566,7 +491,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      showDragHandle: false,
       backgroundColor: Colors.transparent, // Important for glass effect
       barrierColor: Colors.black54, // Ensure barrier is visible and interactive
       isDismissible: true,
@@ -585,34 +509,6 @@ class _RootShellState extends State<RootShell> with WindowListener {
   Widget build(BuildContext context) {
     if (_isInitializing) {
       return const Scaffold(body: Center(child: FluxLoader()));
-    }
-
-    if (_isMaintenanceMode) {
-      return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.construction_rounded, size: 64),
-                const SizedBox(height: 20),
-                const Text(
-                  '系统维护中',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  (_maintenanceMessage?.trim().isNotEmpty == true)
-                      ? _maintenanceMessage!
-                      : '服务正在维护升级，请稍后再试。',
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
     }
 
     return _buildMainScaffold();
@@ -635,18 +531,15 @@ class _RootShellState extends State<RootShell> with WindowListener {
         );
       case 1: // Plans
         return PlansScreen(
-          onChoose: _purchaseEnabled ? _openCheckout : null,
+          onChoose: _openCheckout,
           onRedeemed: () => setState(() => _accountReload++),
         );
       case 2: // Account
         return AccountScreen(
           onLogout: widget.onLogout,
-          onLogoutStarted: _beginLogout,
-          onLogoutCancelled: _cancelLogout,
           connectionStatus: _statusMessage,
           connectionState: _status.name,
           reloadToken: _accountReload,
-          inviteEnabled: _inviteEnabled,
         );
       default:
         return const SizedBox.shrink();

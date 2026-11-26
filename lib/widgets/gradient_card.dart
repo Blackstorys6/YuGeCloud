@@ -19,36 +19,33 @@ class GradientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
-    final isLightTheme = Theme.of(context).brightness == Brightness.light;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
         filter: ImageFilter.blur(
-          sigmaX: isLightTheme ? 18 : 20,
-          sigmaY: isLightTheme ? 18 : 20,
+          sigmaX: 20,
+          sigmaY: 20,
         ),
         child: Container(
           decoration: BoxDecoration(
             color: palette.surface.withValues(
-              alpha: isLightTheme ? 0.76 : 0.78,
+              alpha: 0.78,
             ),
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
               color: palette.border.withValues(
-                alpha: isLightTheme ? 0.78 : 0.72,
+                alpha: 0.72,
               ),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
                 color: palette.shadow.withValues(
-                  alpha: isLightTheme ? 0.22 : 0.52,
+                  alpha: 0.52,
                 ),
-                blurRadius: isLightTheme ? 18 : 26,
-                offset: isLightTheme
-                    ? const Offset(0, 7)
-                    : const Offset(0, 10),
+                blurRadius: 26,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -58,10 +55,10 @@ class GradientCard extends StatelessWidget {
               gradient: LinearGradient(
                 colors: [
                   palette.glassOverlay.withValues(
-                    alpha: isLightTheme ? 0.58 : 0.48,
+                    alpha: 0.48,
                   ),
                   palette.glassOverlay.withValues(
-                    alpha: isLightTheme ? 0.10 : 0.04,
+                    alpha: 0.04,
                   ),
                   Colors.transparent,
                 ],

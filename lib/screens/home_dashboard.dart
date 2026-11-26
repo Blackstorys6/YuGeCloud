@@ -10,7 +10,7 @@ import 'invite_screen.dart';
 import '../widgets/fade_in_widget.dart';
 
 AppPalette _homePalette(BuildContext context) =>
-    Theme.of(context).extension<AppPalette>() ?? AppPalette.light;
+    Theme.of(context).extension<AppPalette>() ?? AppPalette.dark;
 
 class HomeDashboard extends StatefulWidget {
   final VoidCallback onConnectPressed;
@@ -130,7 +130,7 @@ class _HomeDashboardState extends State<HomeDashboard>
   Widget build(BuildContext context) {
     final isBusy = widget.isConnecting;
     final palette =
-        Theme.of(context).extension<AppPalette>() ?? AppPalette.light;
+        Theme.of(context).extension<AppPalette>() ?? AppPalette.dark;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -452,9 +452,7 @@ class _HomeDashboardState extends State<HomeDashboard>
                     : _homePalette(context).accent,
                 disabledBackgroundColor: Color.lerp(
                   _homePalette(context).accent,
-                  Theme.of(context).brightness == Brightness.light
-                      ? _homePalette(context).textPrimary
-                      : Colors.black,
+                  Colors.black,
                   0.24,
                 )!,
                 foregroundColor: Colors.white,
@@ -918,7 +916,6 @@ class _HomeDashboardState extends State<HomeDashboard>
     String title,
     String subtitle,
   ) {
-    final isLightTheme = Theme.of(context).brightness == Brightness.light;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -930,10 +927,10 @@ class _HomeDashboardState extends State<HomeDashboard>
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(
-              alpha: isLightTheme ? 0.1575 : 0.1,
+              alpha: 0.1,
             ),
-            blurRadius: isLightTheme ? 4.9 : 4,
-            offset: isLightTheme ? const Offset(0, 2.1) : const Offset(0, 2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),

@@ -245,10 +245,7 @@ class _InviteScreenState extends State<InviteScreen>
                       Text(
                         '¥${stat.availableCommission}',
                         style: TextStyle(
-                          color:
-                              Theme.of(context).brightness == Brightness.light
-                                  ? context.appPalette.accent
-                                  : context.appPalette.textPrimary,
+                          color: context.appPalette.textPrimary,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -0.5,

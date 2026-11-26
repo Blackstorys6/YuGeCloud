@@ -136,79 +136,53 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   Future<void> _submit() async {
-    final submitMode = _mode;
-
     setState(() {
       _loading = true;
       _message = null;
     });
-
     try {
       HapticFeedback.lightImpact();
-
-      if (submitMode == AuthMode.reset) {
-        await _api.forgetPassword(
-          _emailController.text,
-          _emailCodeController.text,
-          _newPasswordController.text,
-        );
-
-        if (!mounted) return;
-
-        setState(() {
-          _mode = AuthMode.login;
-          _emailCodeController.clear();
-          _newPasswordController.clear();
-          _passwordController.clear();
-          _message = 'Password reset successful. Please log in.';
-        });
-        return;
-      }
-
-      final Map<String, dynamic> response;
-
-      if (submitMode == AuthMode.login) {
+      Map<String, dynamic> response;
+      if (_mode == AuthMode.login) {
         response = await _api.login(
           _emailController.text,
           _passwordController.text,
         );
-      } else {
+      } else if (_mode == AuthMode.register) {
         response = await _api.register(
           _emailController.text,
           _passwordController.text,
           inviteCode: _inviteController.text,
           emailCode: _emailCodeController.text,
         );
+      } else {
+        response = await _api.forgetPassword(
+          _emailController.text,
+          _emailCodeController.text,
+          _newPasswordController.text,
+        );
       }
 
-      if (!mounted) return;
-
-      final data = response['data'];
-      if (data is Map) {
-        final token = data['token'];
-        if (token is String && token.isNotEmpty) {
-          await _config.setToken(token);
-          await _config.refreshAuthCache();
-        }
-
-        final authData = data['auth_data'];
-        if (authData is String && authData.isNotEmpty) {
-          await _config.setAuthData(authData);
-          await _config.refreshAuthCache();
-        }
+      final token = (response['data'] ?? {})['token'];
+      if (token is String && token.isNotEmpty) {
+        await _config.setToken(token);
+        // 确保 token 保存后立即刷新缓存
+        await _config.refreshAuthCache();
       }
-
+      final authData = (response['data'] ?? {})['auth_data'];
+      if (authData is String && authData.isNotEmpty) {
+        await _config.setAuthData(authData);
+        // 确保 authData 保存后立即刷新缓存
+        await _config.refreshAuthCache();
+      }
+      // 添加短暂延迟，确保数据已完全保存
       await Future.delayed(const Duration(milliseconds: 100));
-
-      if (!mounted) return;
       widget.onAuthed();
     } catch (e) {
-      if (mounted) {
-        final msg = e is V2BoardApiException ? e.message : e.toString();
-        setState(() {
-          _message = msg;
-        });
-      }
+      final msg = e is V2BoardApiException ? e.message : e.toString();
+      setState(() {
+        _message = msg;
+      });
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -269,26 +243,19 @@ class _AuthScreenState extends State<AuthScreen>
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: (Theme.of(context).brightness == Brightness.dark
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark).copyWith(
+      value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: context.appPalette.background,
-        statusBarIconBrightness:
-            Theme.of(context).brightness == Brightness.dark
-                ? Brightness.light
-                : Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
         systemNavigationBarColor: context.appPalette.background,
-        systemNavigationBarIconBrightness:
-            Theme.of(context).brightness == Brightness.dark
-                ? Brightness.light
-                : Brightness.dark,
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
         backgroundColor: context.appPalette.background,
         body: Stack(
           children: [
             // 0. 纯黑底层 (确保无闪烁)
-            Positioned.fill(child: Container(color: context.appPalette.background)),
+            Positioned.fill(
+                child: Container(color: context.appPalette.background)),
             // 1. Dynamic Background (Fade In to match Splash's blackness)
             Positioned.fill(
               child: FadeTransition(
@@ -392,7 +359,8 @@ class _AuthScreenState extends State<AuthScreen>
                                           .headlineSmall
                                           ?.copyWith(
                                             fontWeight: FontWeight.w700,
-                                            color: context.appPalette.textPrimary,
+                                            color:
+                                                context.appPalette.textPrimary,
                                           ),
                                       textAlign: TextAlign.center,
                                     ),
@@ -471,7 +439,8 @@ class _AuthScreenState extends State<AuthScreen>
                                     child: ElevatedButton(
                                       onPressed: _loading ? null : _submit,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: context.appPalette.accent,
+                                        backgroundColor:
+                                            context.appPalette.accent,
                                         foregroundColor: Colors.white,
                                         elevation: 0,
                                         shadowColor: Colors.transparent,
@@ -487,7 +456,9 @@ class _AuthScreenState extends State<AuthScreen>
                                               height: 24,
                                               child: FluxLoader(
                                                 size: 24,
-                                                color: Theme.of(context).colorScheme.onPrimary,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onPrimary,
                                               ),
                                             )
                                           : Text(
@@ -679,7 +650,8 @@ class _AuthScreenState extends State<AuthScreen>
       decoration: BoxDecoration(
         color: context.appPalette.surfaceAlt.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.appPalette.border.withValues(alpha: 0.6)),
+        border:
+            Border.all(color: context.appPalette.border.withValues(alpha: 0.6)),
       ),
       child: TextField(
         controller: controller,
@@ -691,7 +663,8 @@ class _AuthScreenState extends State<AuthScreen>
           hintStyle: TextStyle(
             color: context.appPalette.textSecondary,
           ),
-          prefixIcon: Icon(icon, color: context.appPalette.textSecondary, size: 20),
+          prefixIcon:
+              Icon(icon, color: context.appPalette.textSecondary, size: 20),
           suffixIcon: suffix,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(

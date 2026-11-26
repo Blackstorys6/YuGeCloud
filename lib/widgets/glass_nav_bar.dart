@@ -16,7 +16,7 @@ class GlassNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final palette =
-        Theme.of(context).extension<AppPalette>() ?? AppPalette.light;
+        Theme.of(context).extension<AppPalette>() ?? AppPalette.dark;
 
     return Padding(
       padding: const EdgeInsets.only(

@@ -103,9 +103,7 @@ class _AnimatedCardState extends State<AnimatedCard>
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
-    final shadowIntensity = Theme.of(context).brightness == Brightness.light
-        ? 0.35
-        : widget.shadowIntensity;
+    final shadowIntensity = widget.shadowIntensity;
 
     return GestureDetector(
       onTapDown: widget.onTap != null ? _handleTapDown : null,

@@ -15,7 +15,6 @@ class NodeInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
-    final isLightTheme = Theme.of(context).brightness == Brightness.light;
     final latencyColor = node.latency == null
         ? palette.textSecondary
         : node.latency! < 100
@@ -44,10 +43,10 @@ class NodeInfoCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: palette.shadow.withValues(
-                alpha: isLightTheme ? 0.1575 : 0.6,
+                alpha: 0.6,
               ),
-              blurRadius: isLightTheme ? 4.9 : 16,
-              offset: isLightTheme ? const Offset(0, 2.1) : const Offset(0, 5),
+              blurRadius: 16,
+              offset: const Offset(0, 5),
             ),
           ],
         ),

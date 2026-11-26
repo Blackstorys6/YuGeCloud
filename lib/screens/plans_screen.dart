@@ -11,6 +11,7 @@ import '../widgets/staggered_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/flux_loader.dart';
 import '../widgets/redeem_gift_dialog.dart';
+import 'orders_screen.dart';
 
 import 'plan_detail_screen.dart';
 
@@ -86,8 +87,8 @@ class _PlansScreenState extends State<PlansScreen> {
         }
         final plans = snapshot.data!;
         return StaggeredList(
-          padding: EdgeInsets.only(
-            top: 16,
+          padding: const EdgeInsets.only(
+            top: 0,
             left: 20,
             right: 20,
             bottom: 100,

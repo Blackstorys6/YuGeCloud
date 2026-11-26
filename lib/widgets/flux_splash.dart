@@ -82,15 +82,12 @@ class _FluxSplashState extends State<FluxSplash> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final palette = context.appPalette;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: palette.background,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
         systemNavigationBarColor: palette.background,
-        systemNavigationBarIconBrightness:
-            isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
         backgroundColor: palette.background,
