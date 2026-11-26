@@ -3,9 +3,11 @@ package com.example.flux
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.net.Uri
 import android.net.VpnService
 import android.os.Bundle
 import android.os.Handler
+import android.provider.Settings
 import android.os.Looper
 import android.util.Log
 import android.view.View
@@ -18,6 +20,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import androidx.core.content.FileProvider
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : FlutterActivity() {
@@ -47,6 +50,62 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.yugecloud.app/update"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "installApk" -> {
+                    val apkPath = call.argument<String>("path")
+                    if (apkPath.isNullOrBlank()) {
+                        result.error("INVALID_ARGUMENT", "APK path is empty", null)
+                        return@setMethodCallHandler
+                    }
+
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                            !packageManager.canRequestPackageInstalls()
+                        ) {
+                            val settingsIntent = Intent(
+                                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                Uri.parse("package:$packageName")
+                            )
+                            startActivity(settingsIntent)
+                            result.success("permission_required")
+                            return@setMethodCallHandler
+                        }
+
+                        val apkFile = File(apkPath)
+                        if (!apkFile.exists()) {
+                            result.error("FILE_NOT_FOUND", "APK file does not exist", null)
+                            return@setMethodCallHandler
+                        }
+
+                        val apkUri = FileProvider.getUriForFile(
+                            this,
+                            "$packageName.fileprovider",
+                            apkFile
+                        )
+
+                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(
+                                apkUri,
+                                "application/vnd.android.package-archive"
+                            )
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+
+                        startActivity(installIntent)
+                        result.success("started")
+                    } catch (e: Exception) {
+                        result.error("INSTALL_ERROR", e.message, null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {

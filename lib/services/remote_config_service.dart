@@ -18,6 +18,7 @@ class RemoteConfigService {
   /// 建议使用多个 CDN 地址作为备份
   /// TODO: Replace with your own OSS/CDN URLs
   static const List<String> _ossUrls = [
+    'https://hk.yugenb.dpdns.org:8444/app-updates/config/latest.json',
   ];
 
   /// 默认 API 域名（当 OSS 配置获取失败时使用）
@@ -122,7 +123,7 @@ class RemoteConfigService {
 
   /// 检查是否有新版本
   Future<UpdateCheckResult?> checkForUpdate(String currentVersion) async {
-    final config = await fetchConfig();
+    final config = await fetchConfig(forceRefresh: true);
     if (config?.update == null) return null;
 
     final platform = _getPlatformName();
@@ -142,6 +143,7 @@ class RemoteConfigService {
       hasUpdate: true,
       latestVersion: platformUpdate.version,
       downloadUrl: platformUpdate.url,
+      sha256: platformUpdate.sha256,
       isForced: isForced,
       changelog: config.update!.changelog,
     );
@@ -363,6 +365,7 @@ class UpdateCheckResult {
   final bool hasUpdate;
   final String latestVersion;
   final String? downloadUrl;
+  final String? sha256;
   final bool isForced;
   final String? changelog;
 
@@ -370,6 +373,7 @@ class UpdateCheckResult {
     required this.hasUpdate,
     required this.latestVersion,
     this.downloadUrl,
+    this.sha256,
     this.isForced = false,
     this.changelog,
   });

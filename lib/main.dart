@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'widgets/app_update_dialog.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -179,6 +181,7 @@ class _AuthGateState extends State<AuthGate> {
   final _config = ApiConfig();
   bool _authed = false;
   bool _isChecking = true;
+  bool _updateCheckStarted = false;
   final _startTime = DateTime.now();
 
   // 最小启动动画时间（毫秒）- 让动画至少播放这么久
@@ -236,6 +239,34 @@ class _AuthGateState extends State<AuthGate> {
         _authed = authResult;
         _isChecking = false;
       });
+    }
+
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkForAppUpdate();
+      });
+    }
+  }
+
+
+  Future<void> _checkForAppUpdate() async {
+    if (!Platform.isAndroid || _updateCheckStarted) return;
+    _updateCheckStarted = true;
+
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final update = await RemoteConfigService()
+          .checkForUpdate(packageInfo.version);
+
+      if (!mounted || update == null || !update.hasUpdate) return;
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: !update.isForced,
+        builder: (_) => AppUpdateDialog(update: update),
+      );
+    } catch (e) {
+      debugPrint('[AuthGate] Update check failed: $e');
     }
   }
 

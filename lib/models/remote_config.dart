@@ -164,11 +164,13 @@ class UpdateInfo {
 class PlatformUpdate {
   final String version;
   final String? url;
+  final String? sha256;
   final bool force;
 
   PlatformUpdate({
     required this.version,
     this.url,
+    this.sha256,
     this.force = false,
   });
 
@@ -176,6 +178,7 @@ class PlatformUpdate {
     return PlatformUpdate(
       version: json['version'] as String? ?? '0.0.0',
       url: json['url'] as String?,
+      sha256: json['sha256'] as String?,
       force: json['force'] as bool? ?? false,
     );
   }
@@ -183,6 +186,7 @@ class PlatformUpdate {
   Map<String, dynamic> toJson() => {
         'version': version,
         if (url != null) 'url': url,
+        if (sha256 != null) 'sha256': sha256,
         'force': force,
       };
 }
