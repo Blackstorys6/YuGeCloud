@@ -13,6 +13,7 @@ import 'screens/auth_screen.dart';
 import 'screens/root_shell.dart';
 import 'services/api_config.dart';
 import 'services/remote_config_service.dart';
+import 'services/app_update_verification_service.dart';
 import 'services/tray_service.dart';
 import 'services/unified_vpn_service.dart';
 import 'services/user_data_service.dart';
@@ -224,6 +225,19 @@ class _AuthGateState extends State<AuthGate> {
       } catch (_) {
         await _config.clearAuth();
         authResult = false;
+      }
+    }
+
+    // 追加：检查上次安装的目标版本是否已生效
+    if (Platform.isAndroid) {
+      try {
+        final verified = await AppUpdateVerificationService()
+            .verifyPendingUpdate();
+        if (verified) {
+          debugPrint('[AppUpdate] 更新后版本验证成功');
+        }
+      } catch (e) {
+        debugPrint('[AppUpdate] 更新后版本验证失败：$e');
       }
     }
 

@@ -108,6 +108,7 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
       setState(() {
         _downloading = false;
         _installStarted = result == 'started';
+        _waitingForPermission = result == 'permission_required';
         _message = result == 'permission_required'
             ? '请在系统设置中允许屿哥云安装未知来源应用，然后返回此页面重新点击安装。'
             : '已打开 Android 系统安装界面，请按照系统提示完成更新。';

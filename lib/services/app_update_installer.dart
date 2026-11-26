@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+import 'app_update_verification_service.dart';
+
 import 'remote_config_service.dart';
 
 class AppUpdateInstaller {
@@ -34,6 +36,7 @@ class AppUpdateInstaller {
     final temp = await getTemporaryDirectory();
     final directory = Directory('${temp.path}/updates');
     await directory.create(recursive: true);
+    await cleanupOldUpdateFiles();
 
     final version =
         update.latestVersion.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
@@ -59,6 +62,9 @@ class AppUpdateInstaller {
 
     if (await apkFile.exists()) await apkFile.delete();
     await partFile.rename(apkFile.path);
+
+    await AppUpdateVerificationService()
+        .recordPendingVersion(update.latestVersion);
 
     final result = await _channel.invokeMethod<String>(
       'installApk',
@@ -93,6 +99,9 @@ class AppUpdateInstaller {
       throw Exception('已下载的 APK 不存在，请重新下载');
     }
 
+    await AppUpdateVerificationService()
+        .recordPendingVersion(update.latestVersion);
+
     final result = await _channel.invokeMethod<String>(
       'installApk',
       {'path': apkFile.path},
@@ -103,6 +112,37 @@ class AppUpdateInstaller {
     }
 
     return result!;
+  }
+
+
+  /// 清理超过 30 天的旧更新文件。
+  Future<void> cleanupOldUpdateFiles({
+    Duration maxAge = const Duration(days: 30),
+  }) async {
+    final temp = await getTemporaryDirectory();
+    final directory = Directory('${temp.path}/updates');
+
+    if (!await directory.exists()) return;
+
+    final cutoff = DateTime.now().subtract(maxAge);
+
+    await for (final entity in directory.list(followLinks: false)) {
+      if (entity is! File) continue;
+
+      final name = entity.uri.pathSegments.last;
+      if (!name.endsWith('.apk') && !name.endsWith('.apk.part')) {
+        continue;
+      }
+
+      try {
+        final modified = await entity.lastModified();
+        if (modified.isBefore(cutoff)) {
+          await entity.delete();
+        }
+      } catch (e) {
+        // 单个文件清理失败不影响其他文件。
+      }
+    }
   }
 
   Future<void> _downloadWithResume(
