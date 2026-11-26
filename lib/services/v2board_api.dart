@@ -1,11 +1,9 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:encrypt/encrypt.dart' as encrypt_pkg;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'api_config.dart';
-import 'remote_config_service.dart';
 import '../models/invite_data.dart';
 import '../utils/user_agent_utils.dart';
 
@@ -127,6 +125,12 @@ class V2BoardApi {
       );
       final jsonString = jsonEncode(payload);
       final encrypted = encrypter.encrypt(jsonString);
+
+      // 调试输出
+      if (kDebugMode) {
+        print('[sendEmailVerify] payload: $jsonString');
+        print('[sendEmailVerify] encrypted: ${encrypted.base64}');
+      }
 
       // 发送加密后的 params
       return _post(
@@ -250,17 +254,12 @@ class V2BoardApi {
     String path, {
     Map<String, String>? query,
     bool withAuth = true,
-    bool retryOnNetworkFailure = true,
-    bool allowFailover = true,
   }) async {
     return _getWithRetry(
       path,
       query: query,
       withAuth: withAuth,
-      retryOnNetworkFailure: retryOnNetworkFailure,
-      allowFailover: allowFailover,
       didRetry: false,
-      didFailover: false,
     );
   }
 
@@ -268,18 +267,13 @@ class V2BoardApi {
     String path, {
     required Map<String, String>? query,
     required bool withAuth,
-    required bool retryOnNetworkFailure,
-    required bool allowFailover,
     required bool didRetry,
-    required bool didFailover,
   }) async {
     int retryCount = 0;
     const maxRetries = 2;
     while (true) {
-      Uri? failedUri;
       try {
         final uri = await _buildUri(path, query);
-        failedUri = uri;
         final headers = await _headers(withAuth: withAuth);
         _log('GET', uri.toString(), headers: headers);
         final response = await http
@@ -299,41 +293,13 @@ class V2BoardApi {
             path,
             query: query,
             withAuth: withAuth,
-            retryOnNetworkFailure: retryOnNetworkFailure,
-            allowFailover: allowFailover,
             didRetry: true,
-            didFailover: didFailover,
           );
         }
         return _handle(response, context: uri.toString());
       } catch (e) {
-        if (allowFailover &&
-            !didFailover &&
-            failedUri != null &&
-            (e is HandshakeException ||
-                e is SocketException ||
-                e is TimeoutException)) {
-          final failedDomain = failedUri.origin;
-          _log(
-              'FAILOVER', 'API domain failed: $failedDomain; switching domain');
-          final newDomain = await RemoteConfigService()
-              .refreshActiveDomain(excludeDomain: failedDomain);
-          _log('FAILOVER', 'Switched API domain to: $newDomain');
-          return _getWithRetry(
-            path,
-            query: query,
-            withAuth: withAuth,
-            retryOnNetworkFailure: retryOnNetworkFailure,
-            allowFailover: allowFailover,
-            didRetry: didRetry,
-            didFailover: true,
-          );
-        }
-        if (retryOnNetworkFailure &&
-            retryCount < maxRetries &&
-            (e is HandshakeException ||
-                e is SocketException ||
-                e is TimeoutException)) {
+        if (retryCount < maxRetries &&
+            (e is HandshakeException || e is SocketException)) {
           retryCount++;
           _log('RETRY', 'Attempt $retryCount failed for $path: $e');
           await Future.delayed(Duration(seconds: 1 * retryCount));
@@ -358,6 +324,8 @@ class V2BoardApi {
     required bool withAuth,
     required bool didRetry,
   }) async {
+    int retryCount = 0;
+    const maxRetries = 2;
     while (true) {
       try {
         final uri = await _buildUri(path, null);
@@ -386,6 +354,13 @@ class V2BoardApi {
         }
         return _handle(response, context: uri.toString());
       } catch (e) {
+        if (retryCount < maxRetries &&
+            (e is HandshakeException || e is SocketException)) {
+          retryCount++;
+          _log('RETRY', 'Attempt $retryCount failed for $path: $e');
+          await Future.delayed(Duration(seconds: 1 * retryCount));
+          continue;
+        }
         rethrow;
       }
     }
@@ -517,6 +492,7 @@ class V2BoardApi {
     }
     if (kDebugMode) print('[FluxAPI] $method $url');
     if (kDebugMode) print('[FluxAPI] headers: $safeHeaders');
+    if (body != null) if (kDebugMode) print('[FluxAPI] body: $body');
   }
 
   // 临时诊断邀请接口字段类型
@@ -546,11 +522,7 @@ class V2BoardApi {
   }
 
   Future<void> generateInviteCode() async {
-    await _get(
-      '/user/invite/save',
-      retryOnNetworkFailure: false,
-      allowFailover: false,
-    );
+    await _get('/user/invite/save');
   }
 
   Future<List<InviteDetail>> fetchInviteDetails() async {
@@ -586,5 +558,8 @@ class V2BoardApi {
   void _logResponse(http.Response response, String url) {
     if (!kDebugMode) return;
     if (kDebugMode) print('[FluxAPI] <-- ${response.statusCode} $url');
+    if (response.body.isNotEmpty) {
+      if (kDebugMode) print('[FluxAPI] resp: ${response.body}');
+    }
   }
 }

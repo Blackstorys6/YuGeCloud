@@ -7,12 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/server_node.dart';
 import '../utils/user_agent_utils.dart';
 import 'v2board_api.dart';
-import 'remote_config_service.dart';
 
 /// 订阅服务
 class SubscriptionService {
-  static int _cacheGeneration = 0;
-
   final V2BoardApi _api = V2BoardApi();
 
   /// 获取真实的订阅链接
@@ -23,75 +20,17 @@ class SubscriptionService {
       if (data is Map && data.containsKey('subscribe_url')) {
         return data['subscribe_url'].toString();
       }
-      print('[SubscriptionService] Invalid response data type: ${data.runtimeType}');
+      print('[SubscriptionService] Invalid data format: $data');
       throw Exception('API response does not contain subscribe_url');
     } catch (e) {
-      print('[SubscriptionService] Failed to fetch subscription URL (${e.runtimeType})');
+      print('[SubscriptionService] Error fetching subscription URL: $e');
       // 给一个兜底（如果已经有 token 的话）
       rethrow;
     }
   }
 
-  /// 检查备用订阅地址是否为安全的 HTTPS 地址
-  bool _isValidHttpsSubscriptionUrl(String url) {
-    final uri = Uri.tryParse(url.trim());
-    return uri != null &&
-        uri.scheme == 'https' &&
-        uri.host.isNotEmpty &&
-        uri.userInfo.isEmpty &&
-        !uri.hasFragment;
-  }
-
-  /// 根据当前用户的主订阅 URL 构造 HK 备用 URL
-  Uri _buildBackupSubscriptionUri(
-    String primaryUrl,
-    String backupBaseUrl,
-  ) {
-    final primary = Uri.tryParse(primaryUrl.trim());
-    final backup = Uri.tryParse(backupBaseUrl.trim());
-
-    if (primary == null ||
-        primary.scheme != 'https' ||
-        primary.host != 'panel.yugenb.dpdns.org' ||
-        primary.userInfo.isNotEmpty ||
-        primary.hasFragment ||
-        primary.path != '/api/v1/client/subscribe') {
-      throw Exception('Invalid primary subscription URL');
-    }
-
-    if (backup == null ||
-        backup.scheme != 'https' ||
-        backup.host != 'hk.yugenb.dpdns.org' ||
-        backup.port != 8444 ||
-        backup.userInfo.isNotEmpty ||
-        (backup.path.isNotEmpty && backup.path != '/') ||
-        backup.hasQuery ||
-        backup.hasFragment) {
-      throw Exception('Invalid backup subscription endpoint');
-    }
-
-    return primary.replace(
-      host: backup.host,
-      port: backup.port,
-    );
-  }
-
-  bool _isSameOrigin(Uri uri, Uri expected) {
-    return uri.scheme == 'https' &&
-        uri.host == expected.host &&
-        uri.port == expected.port;
-  }
-
   /// 下载订阅文件
-  Future<String> downloadSubscription(
-    String url, {
-    bool requireHttps = false,
-    Uri? requiredOrigin,
-  }) async {
-    if (requireHttps && !_isValidHttpsSubscriptionUrl(url)) {
-      throw Exception('Subscription URL must use HTTPS');
-    }
-
+  Future<String> downloadSubscription(String url) async {
     int retryCount = 0;
     const maxRetries = 3;
 
@@ -112,14 +51,10 @@ class SubscriptionService {
         final client = http.Client();
         try {
           var current = Uri.parse(url);
-          if (requiredOrigin != null &&
-              !_isSameOrigin(current, requiredOrigin)) {
-            throw Exception('Subscription URL origin mismatch');
-          }
           const maxRedirects = 5;
           http.Response? response;
 
-          for (var i = 0; i <= maxRedirects; i++) {
+          for (var i = 0; i < maxRedirects; i++) {
             final request = http.Request('GET', current)
               ..followRedirects = false
               ..headers.addAll({'User-Agent': 'Flux/1.0', 'Accept': '*/*'});
@@ -127,34 +62,19 @@ class SubscriptionService {
             response = await http.Response.fromStream(streamed);
 
             if (response.statusCode >= 300 && response.statusCode < 400) {
-              if (i == maxRedirects) {
-                throw Exception('Too many subscription redirects');
-              }
-
               final location = response.headers['location'];
               if (location == null || location.isEmpty) {
                 throw Exception('Redirect without location');
               }
-
               current = current.resolve(location);
-
-              if (requireHttps &&
-                  !_isValidHttpsSubscriptionUrl(current.toString())) {
-                throw Exception('Insecure subscription redirect');
-              }
-
-              if (requiredOrigin != null &&
-                  !_isSameOrigin(current, requiredOrigin)) {
-                throw Exception('Untrusted subscription redirect origin');
-              }
               continue;
             }
             break;
           }
-
-          if (response == null) {
-            throw Exception('No subscription response received');
-          }
+          response ??= await client.get(
+            current,
+            headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
+          );
 
           if (response.statusCode == 200) {
             return response.body;
@@ -168,7 +88,7 @@ class SubscriptionService {
         }
       } catch (e) {
         retryCount++;
-        print('[SubscriptionService] Download attempt $retryCount failed (${e.runtimeType})');
+        print('[SubscriptionService] Download attempt $retryCount failed: $e');
         if (retryCount >= maxRetries) {
           throw Exception(
             'Error downloading subscription after $maxRetries attempts: $e',
@@ -261,7 +181,6 @@ class SubscriptionService {
   /// 获取并解析订阅节点
   /// [forceRefresh] 是否强制刷新，默认为 false
   Future<List<ServerNode>> fetchNodes({bool forceRefresh = false}) async {
-    final cacheGeneration = _cacheGeneration;
     try {
       // 1. 检查缓存 (默认优先使用缓存)
       if (!forceRefresh) {
@@ -271,90 +190,28 @@ class SubscriptionService {
         }
       }
 
-      // 2. 优先获取当前用户自己的 XBoard 订阅
-      String? primaryError;
-      String? primarySubscriptionUrl;
-      try {
-        primarySubscriptionUrl = await getSubscriptionUrl();
-        final subscriptionContent =
-            await downloadSubscription(
-              primarySubscriptionUrl,
-              requireHttps: true,
-            );
-        final nodes = parseNodes(subscriptionContent);
+      // 2. 从API获取订阅链接（带 token 的正式链接）
+      final subscriptionUrl = await getSubscriptionUrl();
 
-        if (nodes.isNotEmpty) {
-          await _saveSubscriptionCache(
-            subscriptionContent,
-            expectedGeneration: cacheGeneration,
-          );
-          return nodes;
-        }
-        primaryError = 'Primary subscription returned no valid nodes';
-      } catch (e) {
-        primaryError = 'Primary subscription request failed';
-        print('[SubscriptionService] Primary subscription failed (${e.runtimeType})');
+      // 3. 下载订阅文件
+      final subscriptionContent = await downloadSubscription(subscriptionUrl);
+
+      // 4. 解析节点列表（自动检测格式）
+      final nodes = parseNodes(subscriptionContent);
+
+      // 5. 保存缓存
+      if (nodes.isNotEmpty) {
+        await _saveSubscriptionCache(subscriptionContent);
       }
 
-      // 3. 主订阅失败后，保留当前用户的订阅参数并切换 HK 入口
-      String? backupError;
-      try {
-        if (primarySubscriptionUrl == null) {
-          throw Exception('Cannot obtain the user subscription URL');
-        }
-
-        final backupBaseUrl =
-            await RemoteConfigService().getBackupSubscription();
-
-        if (backupBaseUrl == null || backupBaseUrl.trim().isEmpty) {
-          throw Exception('Backup subscription endpoint not configured');
-        }
-
-        final backupUri = _buildBackupSubscriptionUri(
-          primarySubscriptionUrl,
-          backupBaseUrl,
-        );
-
-        final backupContent = await downloadSubscription(
-          backupUri.toString(),
-          requireHttps: true,
-          requiredOrigin: backupUri,
-        );
-        final backupNodes = parseNodes(backupContent);
-
-        if (backupNodes.isEmpty) {
-          throw Exception('Backup subscription returned no valid nodes');
-        }
-
-        await _saveSubscriptionCache(
-          backupContent,
-          expectedGeneration: cacheGeneration,
-        );
-        print('[SubscriptionService] Backup subscription succeeded');
-        return backupNodes;
-      } catch (e) {
-        backupError = 'Backup subscription request failed';
-        print('[SubscriptionService] Backup subscription failed (${e.runtimeType})');
-      }
-
-      // 4. 两种订阅都失败时，保留原有强制刷新缓存回退
-      if (forceRefresh) {
-        final cached = await _getCachedNodes(ignoreExpiration: true);
-        if (cached != null) return cached;
-      }
-
-      throw Exception(
-        'Primary subscription failed: $primaryError; '
-        'Backup subscription failed: $backupError',
-      );
+      return nodes;
     } catch (e) {
       // 如果获取失败且不是强制刷新，尝试返回过期缓存
       if (forceRefresh) {
         final cached = await _getCachedNodes(ignoreExpiration: true);
         if (cached != null) return cached;
       }
-      print('[SubscriptionService] Fetch nodes failed (${e.runtimeType})');
-      throw Exception('Failed to fetch subscription nodes');
+      throw Exception('Failed to fetch nodes: $e');
     }
   }
 
@@ -362,16 +219,17 @@ class SubscriptionService {
     bool ignoreExpiration = false,
   }) async {
     try {
-      if (!ignoreExpiration) {
-        final prefs = await SharedPreferences.getInstance();
-        final lastUpdate = prefs.getInt('nodes_last_update');
-        if (lastUpdate == null) return null;
+      // final prefs = await SharedPreferences.getInstance();
+      // final lastUpdate = prefs.getInt('nodes_last_update');
 
-        final age = DateTime.now().millisecondsSinceEpoch - lastUpdate;
-        if (age < 0 || age >= const Duration(hours: 24).inMilliseconds) {
-          return null;
-        }
-      }
+      // // 如果没有记录或已过期（超过24小时）且不忽略过期
+      // if (!ignoreExpiration) {
+      //   if (lastUpdate == null) return null;
+      //   final lastTime = DateTime.fromMillisecondsSinceEpoch(lastUpdate);
+      //   if (DateTime.now().difference(lastTime).inHours >= 24) {
+      //     return null;
+      //   }
+      // }
 
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/subscription.txt');
@@ -386,27 +244,15 @@ class SubscriptionService {
     }
   }
 
-  Future<void> _saveSubscriptionCache(
-    String content, {
-    required int expectedGeneration,
-  }) async {
+  Future<void> _saveSubscriptionCache(String content) async {
     try {
-      if (expectedGeneration != _cacheGeneration) return;
-
+      // 保存内容
       final directory = await getApplicationDocumentsDirectory();
-      if (expectedGeneration != _cacheGeneration) return;
-
       final file = File('${directory.path}/subscription.txt');
       await file.writeAsString(content);
 
-      if (expectedGeneration != _cacheGeneration) {
-        if (await file.exists()) await file.delete();
-        return;
-      }
-
+      // 保存时间戳
       final prefs = await SharedPreferences.getInstance();
-      if (expectedGeneration != _cacheGeneration) return;
-
       await prefs.setInt(
         'nodes_last_update',
         DateTime.now().millisecondsSinceEpoch,
@@ -416,33 +262,12 @@ class SubscriptionService {
     }
   }
 
-  /// 退出登录时清除订阅缓存
-  Future<void> clearSubscriptionCache() async {
-    _cacheGeneration++;
-
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/subscription.txt');
-
-    if (await file.exists()) {
-      await file.delete();
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('nodes_last_update');
-  }
-
   /// 保存订阅内容到本地
   Future<void> saveSubscriptionLocally(String content) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/subscription.txt');
       await file.writeAsString(content);
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(
-        'nodes_last_update',
-        DateTime.now().millisecondsSinceEpoch,
-      );
     } catch (_) {}
   }
 }

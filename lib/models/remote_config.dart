@@ -1,5 +1,5 @@
-// 远程配置数据模型
-// OSS 配置文件的 Dart 映射
+/// 远程配置数据模型
+/// OSS 配置文件的 Dart 映射
 
 class RemoteConfig {
   final int configVersion;
@@ -165,13 +165,11 @@ class PlatformUpdate {
   final String version;
   final String? url;
   final bool force;
-  final String? sha256;
 
   PlatformUpdate({
     required this.version,
     this.url,
     this.force = false,
-    this.sha256,
   });
 
   factory PlatformUpdate.fromJson(Map<String, dynamic> json) {
@@ -179,7 +177,6 @@ class PlatformUpdate {
       version: json['version'] as String? ?? '0.0.0',
       url: json['url'] as String?,
       force: json['force'] as bool? ?? false,
-      sha256: json['sha256'] as String?,
     );
   }
 
@@ -187,7 +184,6 @@ class PlatformUpdate {
         'version': version,
         if (url != null) 'url': url,
         'force': force,
-        if (sha256 != null) 'sha256': sha256,
       };
 }
 

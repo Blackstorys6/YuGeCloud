@@ -18,11 +18,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.util.concurrent.atomic.AtomicLong
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.content.FileProvider
-import android.net.Uri
-import android.provider.Settings
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.flux/v2ray"
@@ -34,15 +30,6 @@ class MainActivity : FlutterActivity() {
     private var isInitialized = false
     private var isGeoDataReady = false
 
-    private val connectionGeneration = AtomicLong(0L)
-    private val vpnOperationLock = Any()
-
-    @Volatile
-    private var pendingPermissionGeneration: Long = -1L
-
-    private fun isConnectionCurrent(generation: Long): Boolean =
-        connectionGeneration.get() == generation
-    
     companion object {
         private const val TAG = "Flux"
         private const val REQUEST_VPN_PERMISSION = 1
@@ -60,7 +47,7 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "connect" -> {
@@ -69,14 +56,10 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGUMENT", "Config is null", null)
                         return@setMethodCallHandler
                     }
-
-                    val generation = connectionGeneration.incrementAndGet()
-                    pendingPermissionGeneration = -1L
                     FluxVpnService.nodeName = call.argument<String>("nodeName") ?: ""
-
                     Thread {
                         try {
-                            val success = connectV2ray(configJson, generation)
+                            val success = connectV2ray(configJson)
                             mainHandler.post { result.success(success) }
                         } catch (e: Exception) {
                             mainHandler.post {
@@ -86,12 +69,9 @@ class MainActivity : FlutterActivity() {
                     }.start()
                 }
                 "disconnect" -> {
-                    val generation = connectionGeneration.incrementAndGet()
-                    pendingPermissionGeneration = -1L
-
                     Thread {
                         try {
-                            disconnectV2ray(generation)
+                            disconnectV2ray()
                             mainHandler.post { result.success(true) }
                         } catch (e: Exception) {
                             mainHandler.post {
@@ -120,84 +100,13 @@ class MainActivity : FlutterActivity() {
                     vpnStatusSink = null
                 }
             })
-
-        setupUpdateChannel(flutterEngine)
-    }
-
-    private val UPDATE_CHANNEL = "com.yugenb/app_update"
-
-    private fun setupUpdateChannel(flutterEngine: FlutterEngine) {
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            UPDATE_CHANNEL
-        ).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "canInstallPackages" -> {
-                    result.success(
-                        Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-                            packageManager.canRequestPackageInstalls()
-                    )
-                }
-                "openInstallSettings" -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        val intent = Intent(
-                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                            Uri.parse("package:$packageName")
-                        )
-                        startActivity(intent)
-                    }
-                    result.success(true)
-                }
-                "installApk" -> {
-                    val apkPath = call.argument<String>("path")
-                    if (apkPath.isNullOrBlank()) {
-                        result.error("INVALID_PATH", "APK path is empty", null)
-                    } else {
-                        val apkFile = File(apkPath)
-                        if (!apkFile.exists() || !apkFile.isFile) {
-                            result.error("APK_NOT_FOUND", "APK file does not exist", null)
-                        } else if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                            !packageManager.canRequestPackageInstalls()
-                        ) {
-                            result.error(
-                                "INSTALL_PERMISSION_REQUIRED",
-                                "Allow this app to install unknown apps first",
-                                null
-                            )
-                        } else {
-                            try {
-                                val apkUri = FileProvider.getUriForFile(
-                                    this,
-                                    "$packageName.updatefileprovider",
-                                    apkFile
-                                )
-                                val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(
-                                        apkUri,
-                                        "application/vnd.android.package-archive"
-                                    )
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                startActivity(installIntent)
-                                result.success(true)
-                            } catch (e: Exception) {
-                                result.error("INSTALL_FAILED", e.message, null)
-                            }
-                        }
-                    }
-                }
-                else -> result.notImplemented()
-            }
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { false }
         window.setBackgroundDrawableResource(android.R.color.black)
-        
+
         super.onCreate(savedInstanceState)
 
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -214,10 +123,8 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
-        val generation = connectionGeneration.incrementAndGet()
-        pendingPermissionGeneration = -1L
-        disconnectV2ray(generation)
         super.onDestroy()
+        disconnectV2ray()
     }
 
     /**
@@ -245,7 +152,7 @@ class MainActivity : FlutterActivity() {
         // 3. 都没有，尝试从 Assets 复制到 filesDir
         Log.w(TAG, "Xray not found in nativeLibraryDir, trying to copy from assets...")
         val internalBin = File(filesDir, "libxray.so")
-        
+
         // 尝试从 assets 复制 "libxray.so" (Flutter assets mapping needed? No, binary stays in Android assets/libs)
         // 注意：这里需要确保 binary 确实在 android assets 里。
         // 由于用户说 assets/bin 是 Flutter assets，所以 binary 必须通过 nativeLibraryDir 找到最稳。
@@ -253,7 +160,7 @@ class MainActivity : FlutterActivity() {
         if (copyBinaryFromAssets("libxray.so", internalBin)) {
              return internalBin.absolutePath
         }
-        
+
         if (copyBinaryFromAssets("xray-android-arm64-v8a", internalBin)) {
              return internalBin.absolutePath
         }
@@ -278,233 +185,155 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun connectV2ray(configJson: String, generation: Long): Boolean =
-        synchronized(vpnOperationLock) {
-            if (!isConnectionCurrent(generation)) return@synchronized false
-
-            try {
-                if (isV2rayRunning) {
-                    stopVpnService()
-                    xrayProcess?.destroy()
-                    xrayProcess = null
-                    isV2rayRunning = false
-                    currentProtocol = ""
-                    Thread.sleep(500)
-                }
-
-                if (!isConnectionCurrent(generation)) return@synchronized false
-
-                val fullConfigObj = JSONObject(configJson)
-                val outboundConfig = if (fullConfigObj.has("outbound")) {
-                    fullConfigObj.getJSONObject("outbound")
-                } else {
-                    fullConfigObj
-                }
-
-                val routingMode = fullConfigObj.optString("routingMode", "rule")
-                val routingRules = fullConfigObj.optJSONArray("routingRules")
-                val protocol = outboundConfig.optString("protocol", "")
-                currentProtocol = protocol
-
-                Log.d(TAG, "Connecting protocol: $protocol, Mode: $routingMode")
-
-                if (!isConnectionCurrent(generation)) return@synchronized false
-
-                connectXray(outboundConfig, routingMode, routingRules, generation)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error connecting: ${e.message}")
-                e.printStackTrace()
-                false
+    private fun connectV2ray(configJson: String): Boolean {
+        return try {
+            if (isV2rayRunning) {
+                disconnectV2ray()
+                Thread.sleep(500)
             }
+
+            val fullConfigObj = JSONObject(configJson)
+
+            // 兼容旧逻辑：如果直接传的是 Outbound Config (没有 inbound/outbound 包装)，则当作 old style
+            val outboundConfig = if (fullConfigObj.has("outbound")) {
+                fullConfigObj.getJSONObject("outbound")
+            } else {
+                fullConfigObj
+            }
+
+            val routingMode = fullConfigObj.optString("routingMode", "rule")
+            val routingRules = fullConfigObj.optJSONArray("routingRules")
+
+            val protocol = outboundConfig.optString("protocol", "")
+            currentProtocol = protocol
+
+            Log.d(TAG, "Connecting protocol: $protocol, Mode: $routingMode")
+
+            return connectXray(outboundConfig, routingMode, routingRules)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error connecting: ${e.message}")
+            e.printStackTrace()
+            false
         }
+    }
 
     // Old Hysteria2 methods removed (unified into Xray)
-    
+
     /**
      * 使用 Xray 连接（非 Hysteria2 协议）
      */
-    private fun connectXray(
-        outboundConfig: JSONObject,
-        routingMode: String,
-        customRules: org.json.JSONArray?,
-        generation: Long
-    ): Boolean {
-        if (!isConnectionCurrent(generation)) return false
-
+    private fun connectXray(outboundConfig: JSONObject, routingMode: String, customRules: org.json.JSONArray?): Boolean {
+        // 1. 获取可执行文件
         val executablePath = getXrayExecutable()
         if (executablePath == null) {
             Log.e(TAG, "Xray binary not found!")
             return false
         }
 
+        // 2. 生成配置文件
         val configDir = filesDir.absolutePath
         val configFile = File(configDir, "config.json")
         val fullConfig = buildV2rayConfig(outboundConfig, routingMode, customRules)
 
+        // 写入配置文件
         FileOutputStream(configFile).use {
             it.write(fullConfig.toByteArray())
         }
 
-        if (!isConnectionCurrent(generation)) return false
-
+        // 3. 启动进程
         Log.d(TAG, "Starting Xray process: $executablePath -c ${configFile.absolutePath}")
         val pb = ProcessBuilder(executablePath, "-c", configFile.absolutePath)
         pb.directory(filesDir)
+        // 设置环境变量指向 dat 目录
         val env = pb.environment()
         env["xray.location.asset"] = configDir
 
-        val process = pb.start()
-        xrayProcess = process
+        xrayProcess = pb.start()
 
+        // 4. 读取日志（可选，防止 buffer 满）
         Thread {
             try {
-                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                val reader = BufferedReader(InputStreamReader(xrayProcess!!.inputStream))
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     Log.d("XrayCore", line ?: "")
                 }
             } catch (e: Exception) {
+                // Ignore exceptions when process is destroyed
                 Log.d("XrayCore", "Process output stream closed")
             }
         }.start()
 
         Thread {
             try {
-                val reader = BufferedReader(InputStreamReader(process.errorStream))
+                val reader = BufferedReader(InputStreamReader(xrayProcess!!.errorStream))
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     Log.e("XrayCore", line ?: "")
                 }
             } catch (e: Exception) {
-                Log.d("XrayCore", "Process error stream closed")
+                // Ignore exceptions when process is destroyed
+                 Log.d("XrayCore", "Process error stream closed")
             }
         }.start()
 
-        // 监控 Xray 核心意外退出，避免 VPN 状态长期停留在已连接
-        Thread {
-            try {
-                val exitCode = process.waitFor()
-                synchronized(vpnOperationLock) {
-                    if (xrayProcess === process &&
-                        isConnectionCurrent(generation)
-                    ) {
-                        Log.e(TAG, "Xray exited unexpectedly, code=$exitCode")
-                        pendingPermissionGeneration = -1L
-                        xrayProcess = null
-                        isV2rayRunning = false
-                        currentProtocol = ""
-                        FluxVpnService.nodeName = ""
-                        stopVpnService()
-                    }
-                }
-            } catch (e: InterruptedException) {
-                Thread.currentThread().interrupt()
-            }
-        }.start()
-
+        // 等待启动
         Thread.sleep(500)
 
-        if (!isConnectionCurrent(generation)) {
-            process.destroy()
-            if (xrayProcess === process) xrayProcess = null
-            isV2rayRunning = false
-            currentProtocol = ""
+        if (xrayProcess!!.isAlive) {
+            isV2rayRunning = true
+            requestVpnPermission()
+            return true
+        } else {
+            Log.e(TAG, "Xray process died immediately")
             return false
         }
-
-        if (process.isAlive) {
-            isV2rayRunning = true
-            requestVpnPermission(generation)
-            return true
-        }
-
-        Log.e(TAG, "Xray process died immediately")
-        if (xrayProcess === process) xrayProcess = null
-        isV2rayRunning = false
-        return false
     }
 
-    private fun disconnectV2ray(expectedGeneration: Long) {
-        synchronized(vpnOperationLock) {
-            if (!isConnectionCurrent(expectedGeneration)) return
+    private fun disconnectV2ray() {
+        try {
+            stopVpnService()
 
-            pendingPermissionGeneration = -1L
-            try {
-                stopVpnService()
-                xrayProcess?.destroy()
+            // 停止 Xray 进程
+            if (xrayProcess != null) {
+                xrayProcess!!.destroy()
                 xrayProcess = null
-                isV2rayRunning = false
-                currentProtocol = ""
-            } catch (e: Exception) {
-                Log.e(TAG, "Error disconnecting: ${e.message}")
             }
+
+
+
+            isV2rayRunning = false
+            currentProtocol = ""
+        } catch (e: Exception) {
+            Log.e(TAG, "Error disconnecting: ${e.message}")
         }
     }
 
-    private fun requestVpnPermission(generation: Long) {
-        if (!isConnectionCurrent(generation)) return
-
+    private fun requestVpnPermission() {
         val intent = VpnService.prepare(this)
         if (intent != null) {
-            pendingPermissionGeneration = generation
-            mainHandler.post {
-                if (isConnectionCurrent(generation) &&
-                    pendingPermissionGeneration == generation
-                ) {
-                    startActivityForResult(intent, REQUEST_VPN_PERMISSION)
-                }
-            }
+            startActivityForResult(intent, REQUEST_VPN_PERMISSION)
         } else {
-            mainHandler.post {
-                startVpnServiceIfCurrent(generation)
-            }
+            startVpnService()
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == REQUEST_VPN_PERMISSION) {
-            val generation = pendingPermissionGeneration
-            pendingPermissionGeneration = -1L
-
-            if (generation >= 0L && isConnectionCurrent(generation)) {
-                if (resultCode == RESULT_OK) {
-                    startVpnServiceIfCurrent(generation)
-                } else {
-                    synchronized(vpnOperationLock) {
-                        if (isConnectionCurrent(generation)) {
-                            Log.w(TAG, "VPN permission denied")
-                            xrayProcess?.destroy()
-                            xrayProcess = null
-                            isV2rayRunning = false
-                            currentProtocol = ""
-                            FluxVpnService.nodeName = ""
-                        }
-                    }
-                }
-            }
+        if (requestCode == REQUEST_VPN_PERMISSION && resultCode == RESULT_OK) {
+            startVpnService()
         }
     }
 
-    private fun startVpnServiceIfCurrent(generation: Long) {
-        synchronized(vpnOperationLock) {
-            if (!isConnectionCurrent(generation)) return
-            if (xrayProcess?.isAlive != true) return
-
-            try {
-                val intent = Intent(this, FluxVpnService::class.java).apply {
-                    action = FluxVpnService.ACTION_START
-                }
-                startService(intent)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error starting VPN service", e)
-                xrayProcess?.destroy()
-                xrayProcess = null
-                isV2rayRunning = false
-                currentProtocol = ""
-                FluxVpnService.nodeName = ""
+    private fun startVpnService() {
+        try {
+            val intent = Intent(this, FluxVpnService::class.java).apply {
+                action = FluxVpnService.ACTION_START
             }
+            startService(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting VPN service: ${e.message}")
         }
     }
 
@@ -513,8 +342,8 @@ class MainActivity : FlutterActivity() {
             val intent = Intent(this, FluxVpnService::class.java).apply {
                 action = FluxVpnService.ACTION_STOP
             }
-            // 只发送停止指令，由 VPN Service 完成资源清理后自行 stopSelf()
             startService(intent)
+            stopService(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping VPN service: ${e.message}")
         }
@@ -523,14 +352,14 @@ class MainActivity : FlutterActivity() {
     private fun buildV2rayConfig(outbound: JSONObject, routingMode: String, customRules: org.json.JSONArray?): String {
         val config = JSONObject()
         ensureStreamSettings(outbound)
-        
+
         // 1. Log
         val log = JSONObject().put("loglevel", "warning")
         config.put("log", log)
-        
+
         // 2. Stats
         config.put("stats", JSONObject())
-        
+
         // 3. Policy
         val policy = JSONObject()
         val levels = JSONObject().put("0", JSONObject()
@@ -550,19 +379,19 @@ class MainActivity : FlutterActivity() {
         policy.put("levels", levels)
         policy.put("system", system)
         config.put("policy", policy)
-        
+
         // 4. DNS
         val dns = JSONObject()
         dns.put("queryStrategy", "UseIPv4")
         val dnsServers = org.json.JSONArray()
-        
+
         // Domestic DNS
         val domesticDns = JSONObject()
         domesticDns.put("address", "223.5.5.5")
-        
+
         val domesticDomains = org.json.JSONArray()
         domesticDomains.put("geosite:cn")
-        
+
         // Add Server Address to Domestic DNS
         val settings = outbound.optJSONObject("settings")
         if (settings != null && settings.has("address")) {
@@ -571,19 +400,19 @@ class MainActivity : FlutterActivity() {
                 domesticDomains.put(serverAddress)
             }
         }
-        
+
         domesticDns.put("domains", domesticDomains)
         domesticDns.put("expectIPs", org.json.JSONArray().put("geoip:cn"))
         dnsServers.put(domesticDns)
 
-        // Foreign DNS
-        dnsServers.put("8.8.8.8")
-        dnsServers.put("1.1.1.1")
+        // Foreign DNS: DoH, 查询经代理发出
+        dnsServers.put("https://1.1.1.1/dns-query")
+        dnsServers.put("https://8.8.8.8/dns-query")
         dnsServers.put("localhost")
-        
+
         dns.put("servers", dnsServers)
         config.put("dns", dns)
-        
+
         // 5. Inbounds
         val inbounds = org.json.JSONArray()
         val socksInbound = JSONObject()
@@ -595,7 +424,7 @@ class MainActivity : FlutterActivity() {
         socksInbound.put("sniffing", JSONObject().put("enabled", true)
             .put("destOverride", org.json.JSONArray().put("http").put("tls").put("quic")))
         inbounds.put(socksInbound)
-        
+
         val httpInbound = JSONObject()
         httpInbound.put("tag", "http")
         httpInbound.put("port", 10809)
@@ -604,14 +433,14 @@ class MainActivity : FlutterActivity() {
         httpInbound.put("sniffing", JSONObject().put("enabled", true)
             .put("destOverride", org.json.JSONArray().put("http").put("tls").put("quic")))
         inbounds.put(httpInbound)
-        
+
         config.put("inbounds", inbounds)
-        
+
         // 6. Routing
         val routing = JSONObject()
         routing.put("domainStrategy", "IPIfNonMatch")
         val rules = org.json.JSONArray()
-        
+
         // 6.1 Bootstrap Direct
         if (settings != null && settings.has("address")) {
             val serverAddress = settings.getString("address")
@@ -619,58 +448,58 @@ class MainActivity : FlutterActivity() {
                 rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put(serverAddress)))
             }
         }
-        
-        // 6.2 (已移除) 不再让 8.8.8.8 / 1.1.1.1 直连, 国外         // 6.2 DNS Loop Break
-        rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("8.8.8.8").put("1.1.1.1")))
+
+        // 6.2 (已移除) 不再让 8.8.8.8 / 1.1.1.1 直连, 国外 DNS 查询走代理
 
         // 6.3 Mode Handling
         if (routingMode == "global") {
             // Global Mode: Only bypass private/LAN
-            rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
-            rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
+             rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
+             rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
         } else {
             // Rule Mode
             var hasCustomRules = false
             if (customRules != null && customRules.length() > 0) {
-                Log.d(TAG, "Applying ${customRules.length()} custom routing rules")
-                for (i in 0 until customRules.length()) {
-                    rules.put(customRules.getJSONObject(i))
-                }
-                hasCustomRules = true
+                 Log.d(TAG, "Applying ${customRules.length()} custom routing rules")
+                 for (i in 0 until customRules.length()) {
+                     rules.put(customRules.getJSONObject(i))
+                 }
+                 hasCustomRules = true
             }
 
-            // Fallback default rules if no custom rules provided
-            if (!hasCustomRules) {
+            // 无论有没有自定义规则, 都追加默认的内网 + 国内直连规则
+            if (true) {
                 Log.d(TAG, "Applying default routing rules")
-                rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
-                rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
+                 rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:private")))
+                 rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:private")))
 
                 val geoip = File(filesDir, "geoip.dat")
-                if (geoip.exists()) {
+                if (geoip.exists() && File(filesDir, "geosite.dat").exists()) {
                     rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", org.json.JSONArray().put("geosite:cn")))
                     rules.put(JSONObject().put("type", "field").put("outboundTag", "direct").put("ip", org.json.JSONArray().put("geoip:cn")))
                 }
             }
         }
 
-(JSONObject().put("type", "field").put("outboundTag", "proxy").put("network", "tcp,udp"))
-        
+        // Final Catch-all Proxy
+        rules.put(JSONObject().put("type", "field").put("outboundTag", "proxy").put("network", "tcp,udp"))
+
         routing.put("rules", rules)
         config.put("routing", routing)
-        
+
         // 7. Outbounds
         val outbounds = org.json.JSONArray()
         if (!outbound.has("tag")) outbound.put("tag", "proxy")
         outbounds.put(outbound)
-        
+
         outbounds.put(JSONObject().put("protocol", "freedom").put("tag", "direct").put("settings", JSONObject().put("domainStrategy", "UseIP")))
         outbounds.put(JSONObject().put("protocol", "blackhole").put("tag", "block"))
-        
+
         config.put("outbounds", outbounds)
-        
+
         return config.toString()
     }
-    
+
     private fun ensureStreamSettings(outbound: JSONObject) {
         val protocol = outbound.optString("protocol", "")
         if (protocol == "trojan") {
