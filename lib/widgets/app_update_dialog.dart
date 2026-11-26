@@ -22,14 +22,67 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
   bool _installStarted = false;
   int _received = 0;
   int _total = 0;
+  double _downloadSpeed = 0;
   String? _message;
+  bool _waitingForPermission = false;
+  bool _resumingInstall = false;
+  late final AppLifecycleListener _appLifecycleListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _appLifecycleListener = AppLifecycleListener(
+      onResume: _handleAppResumed,
+    );
+  }
+
+  @override
+  void dispose() {
+    _appLifecycleListener.dispose();
+    super.dispose();
+  }
+
+  void _handleAppResumed() {
+    _continueInstallIfAuthorized();
+  }
+
+  Future<void> _continueInstallIfAuthorized() async {
+    if (!_waitingForPermission || _resumingInstall || !mounted) return;
+
+    _resumingInstall = true;
+    try {
+      final allowed = await _installer.canInstallPackages();
+      if (!allowed || !mounted) return;
+
+      final result = await _installer.installDownloadedApk(widget.update);
+
+      if (!mounted) return;
+      setState(() {
+        _waitingForPermission = result == 'permission_required';
+        _installStarted = result == 'started';
+        _waitingForPermission = result == 'permission_required';
+        _message = result == 'permission_required'
+            ? '尚未获得安装权限，请在系统设置中允许后返回。'
+            : '已打开 Android 系统安装界面，请按照系统提示完成更新。';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _message = '继续安装失败：$e';
+      });
+    } finally {
+      _resumingInstall = false;
+    }
+  }
 
   Future<void> _startUpdate() async {
     setState(() {
       _downloading = true;
       _message = null;
+      _waitingForPermission = false;
       _received = 0;
       _total = 0;
+      _downloadSpeed = 0;
     });
 
     try {
@@ -40,6 +93,12 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
           setState(() {
             _received = received;
             _total = total;
+          });
+        },
+        onSpeed: (bytesPerSecond) {
+          if (!mounted) return;
+          setState(() {
+            _downloadSpeed = bytesPerSecond;
           });
         },
       );
@@ -70,12 +129,20 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
+  String _formatSpeed(double bytesPerSecond) {
+    if (bytesPerSecond < 1024) {
+      return '${bytesPerSecond.toStringAsFixed(0)} B/s';
+    }
+    if (bytesPerSecond < 1024 * 1024) {
+      return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
+    }
+    return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+  }
+
   @override
   Widget build(BuildContext context) {
     final forced = widget.update.isForced;
-    final progress = _total > 0
-        ? (_received / _total).clamp(0.0, 1.0)
-        : null;
+    final progress = _total > 0 ? (_received / _total).clamp(0.0, 1.0) : null;
 
     return PopScope(
       canPop: !forced || _installStarted,
@@ -125,6 +192,11 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                   _total > 0
                       ? '${_formatBytes(_received)} / ${_formatBytes(_total)}'
                       : '正在下载：${_formatBytes(_received)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '下载速度：${_formatSpeed(_downloadSpeed)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],

@@ -56,6 +56,12 @@ class MainActivity : FlutterActivity() {
             "com.yugecloud.app/update"
         ).setMethodCallHandler { call, result ->
             when (call.method) {
+                "canInstallPackages" -> {
+                    result.success(
+                        Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                        packageManager.canRequestPackageInstalls()
+                    )
+                }
                 "installApk" -> {
                     val apkPath = call.argument<String>("path")
                     if (apkPath.isNullOrBlank()) {
