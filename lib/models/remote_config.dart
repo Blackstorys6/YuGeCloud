@@ -195,13 +195,11 @@ class ContactInfo {
   final String? telegram;
   final String? website;
   final String? email;
-  final String? crispWebsiteId;
 
   ContactInfo({
     this.telegram,
     this.website,
     this.email,
-    this.crispWebsiteId,
   });
 
   factory ContactInfo.fromJson(Map<String, dynamic> json) {
@@ -209,7 +207,6 @@ class ContactInfo {
       telegram: json['telegram'] as String?,
       website: json['website'] as String?,
       email: json['email'] as String?,
-      crispWebsiteId: json['crisp_website_id'] as String?,
     );
   }
 
@@ -217,7 +214,6 @@ class ContactInfo {
         if (telegram != null) 'telegram': telegram,
         if (website != null) 'website': website,
         if (email != null) 'email': email,
-        if (crispWebsiteId != null) 'crisp_website_id': crispWebsiteId,
       };
 }
 

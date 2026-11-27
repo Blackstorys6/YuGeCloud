@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -8,12 +9,14 @@ import '../services/user_data_service.dart';
 import '../services/v2board_api.dart'; // For V2BoardApiException
 import '../services/api_config.dart';
 import '../services/alert_service.dart';
+import '../services/remote_config_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/formatters.dart';
 import '../widgets/animated_card.dart';
 import '../widgets/staggered_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/flux_loader.dart';
+import '../widgets/app_update_dialog.dart';
 import 'invite_screen.dart';
 import 'my_orders_screen.dart';
 import 'privacy_screen.dart';
@@ -40,6 +43,7 @@ class _AccountScreenState extends State<AccountScreen> {
   final _userDataService = UserDataService();
   late Future<Map<String, dynamic>> _accountFuture;
   bool _isRetrying = false; // 重试时强制显示 loading
+  bool _checkingForUpdate = false;
 
   @override
   void initState() {
@@ -86,6 +90,41 @@ class _AccountScreenState extends State<AccountScreen> {
         totalBytes: totalBytes,
         expiredAt: expiredAt,
       );
+    }
+  }
+
+  Future<void> _checkForAppUpdate() async {
+    if (_checkingForUpdate) return;
+
+    setState(() => _checkingForUpdate = true);
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final update = await RemoteConfigService()
+          .checkForUpdate(packageInfo.version);
+
+      if (!mounted) return;
+
+      if (update == null || !update.hasUpdate) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('当前已是最新版本')),
+        );
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: !update.isForced,
+        builder: (_) => AppUpdateDialog(update: update),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('检查更新失败，请稍后重试')),
+        );
+      }
+      debugPrint('[AppUpdate] 手动检查更新失败：$e');
+    } finally {
+      if (mounted) setState(() => _checkingForUpdate = false);
     }
   }
 
@@ -474,6 +513,21 @@ class _AccountScreenState extends State<AccountScreen> {
                   Icons.info_outline,
                   AppLocalizations.of(context)?.about ?? 'About 屿哥云',
                   () => _showAboutDialog(context),
+                ),
+              ]),
+            ),
+
+            SizedBox(height: 12),
+            _buildCategoryCard(
+              Icons.system_update_alt_rounded,
+              '应用更新',
+              '检查屿哥云最新版本',
+              () => _openCategory('应用更新', [
+                _buildLinkRow(
+                  context,
+                  Icons.system_update_alt_rounded,
+                  '检查更新',
+                  _checkForAppUpdate,
                 ),
               ]),
             ),

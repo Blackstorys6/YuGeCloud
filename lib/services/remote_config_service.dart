@@ -191,12 +191,6 @@ class RemoteConfigService {
     return config?.backupSubscription;
   }
 
-  /// 获取 Crisp 客服 Website ID
-  Future<String?> getCrispWebsiteId() async {
-    final config = await fetchConfig();
-    return config?.contact?.crispWebsiteId;
-  }
-
   /// 获取路由规则
   Future<Map<String, dynamic>?> fetchRoutingRules() async {
     final config = await fetchConfig();
