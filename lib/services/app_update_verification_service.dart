@@ -5,15 +5,23 @@ class AppUpdateVerificationService {
   static const String _pendingVersionKey = 'yugecloud_pending_update_version';
 
   static int _compareVersions(String a, String b) {
-    final left = a.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    final right = b.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    List<int> parseVersion(String version) {
+      final parts = version.trim().split('+');
+      final numbers = parts.first
+          .split('.')
+          .map((part) => int.tryParse(part) ?? 0)
+          .toList();
+      final buildNumber = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+      numbers.add(buildNumber);
+      return numbers;
+    }
 
-    final length = left.length > right.length ? left.length : right.length;
+    final left = parseVersion(a);
+    final right = parseVersion(b);
 
-    for (var i = 0; i < length; i++) {
+    for (var i = 0; i < 4; i++) {
       final x = i < left.length ? left[i] : 0;
       final y = i < right.length ? right[i] : 0;
-
       if (x > y) return 1;
       if (x < y) return -1;
     }
@@ -43,7 +51,7 @@ class AppUpdateVerificationService {
     }
 
     final packageInfo = await PackageInfo.fromPlatform();
-    final currentVersion = packageInfo.version;
+    final currentVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
     if (_compareVersions(currentVersion, targetVersion) >= 0) {
       await prefs.remove(_pendingVersionKey);

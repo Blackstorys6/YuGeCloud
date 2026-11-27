@@ -102,7 +102,7 @@ class _AccountScreenState extends State<AccountScreen> {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final update = await RemoteConfigService()
-          .checkForUpdate(packageInfo.version);
+          .checkForUpdate('${packageInfo.version}+${packageInfo.buildNumber}');
 
       if (!mounted) return;
 
@@ -291,8 +291,12 @@ class _AccountScreenState extends State<AccountScreen> {
                               Text(
                                 subInfo['plan'] != null
                                     ? (subInfo['plan']['name'] ??
-                                        (AppLocalizations.of(context)?.unknownPlan ?? 'Unknown Plan'))
-                                    : (AppLocalizations.of(context)?.noSubscription ?? 'No Subscription'),
+                                        (AppLocalizations.of(context)
+                                                ?.unknownPlan ??
+                                            'Unknown Plan'))
+                                    : (AppLocalizations.of(context)
+                                            ?.noSubscription ??
+                                        'No Subscription'),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 21,

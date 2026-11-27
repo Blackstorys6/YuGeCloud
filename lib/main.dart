@@ -231,8 +231,8 @@ class _AuthGateState extends State<AuthGate> {
     // 追加：检查上次安装的目标版本是否已生效
     if (Platform.isAndroid) {
       try {
-        final verified = await AppUpdateVerificationService()
-            .verifyPendingUpdate();
+        final verified =
+            await AppUpdateVerificationService().verifyPendingUpdate();
         if (verified) {
           debugPrint('[AppUpdate] 更新后版本验证成功');
         }
@@ -262,7 +262,6 @@ class _AuthGateState extends State<AuthGate> {
     }
   }
 
-
   Future<void> _checkForAppUpdate() async {
     if (!Platform.isAndroid || _updateCheckStarted) return;
     _updateCheckStarted = true;
@@ -270,7 +269,7 @@ class _AuthGateState extends State<AuthGate> {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final update = await RemoteConfigService()
-          .checkForUpdate(packageInfo.version);
+          .checkForUpdate('${packageInfo.version}+${packageInfo.buildNumber}');
 
       if (!mounted || update == null || !update.hasUpdate) return;
 

@@ -132,8 +132,7 @@ class RemoteConfigService {
 
     final hasUpdate =
         _compareVersions(currentVersion, platformUpdate.version) < 0;
-    final isForced =
-        platformUpdate.force ||
+    final isForced = platformUpdate.force ||
         (config.update!.minVersion != null &&
             _compareVersions(currentVersion, config.update!.minVersion!) < 0);
 
@@ -212,12 +211,10 @@ class RemoteConfigService {
 
     try {
       _log('Fetching routing rules from: ${rulesConfig.url}');
-      final response = await http
-          .get(
-            Uri.parse(rulesConfig.url),
-            headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
-          )
-          .timeout(const Duration(seconds: 15));
+      final response = await http.get(
+        Uri.parse(rulesConfig.url),
+        headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
+      ).timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
         String content = response.body;
         // 尝试解密 (如果OSS上的文件是加密的)
@@ -257,12 +254,10 @@ class RemoteConfigService {
 
   Future<RemoteConfig?> _fetchFromUrl(String url) async {
     try {
-      final response = await http
-          .get(
-            Uri.parse(url),
-            headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
+      ).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         // 智能解密：支持加密和明文两种格式
         final decryptedBody = ConfigEncryption.smartDecrypt(response.body);
@@ -280,12 +275,10 @@ class RemoteConfigService {
       // 简单的健康检查，尝试访问根路径或 /ping
       final uri = Uri.parse(domain);
       final testUrl = uri.replace(path: '/');
-      final response = await http
-          .get(
-            testUrl,
-            headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
-          )
-          .timeout(const Duration(seconds: 5));
+      final response = await http.get(
+        testUrl,
+        headers: {'User-Agent': UserAgentUtils.userAgent, 'Accept': '*/*'},
+      ).timeout(const Duration(seconds: 5));
       return response.statusCode < 500;
     } catch (e) {
       _log('Domain test failed for $domain: $e');
@@ -335,10 +328,21 @@ class RemoteConfigService {
 
   /// 比较版本号，返回 -1 (a < b), 0 (a == b), 1 (a > b)
   int _compareVersions(String a, String b) {
-    final aParts = a.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    final bParts = b.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    List<int> parseVersion(String version) {
+      final parts = version.trim().split('+');
+      final numbers = parts.first
+          .split('.')
+          .map((part) => int.tryParse(part) ?? 0)
+          .toList();
+      final buildNumber = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+      numbers.add(buildNumber);
+      return numbers;
+    }
 
-    for (var i = 0; i < 3; i++) {
+    final aParts = parseVersion(a);
+    final bParts = parseVersion(b);
+
+    for (var i = 0; i < 4; i++) {
       final aNum = i < aParts.length ? aParts[i] : 0;
       final bNum = i < bParts.length ? bParts[i] : 0;
       if (aNum < bNum) return -1;
