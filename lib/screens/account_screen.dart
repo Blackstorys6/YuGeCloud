@@ -274,7 +274,11 @@ class _AccountScreenState extends State<AccountScreen> {
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF55514F), Color(0xFF343438)],
+                    colors: [
+                      Color(0xFF25243A),
+                      Color(0xFF171925),
+                      Color(0xFF10121D),
+                    ],
                   ),
                   borderRadius: BorderRadius.circular(22),
                 ),

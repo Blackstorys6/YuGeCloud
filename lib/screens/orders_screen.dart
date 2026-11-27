@@ -14,6 +14,7 @@ import '../widgets/section_header.dart';
 import '../widgets/flux_loader.dart';
 
 import 'order_success_screen.dart';
+import 'my_orders_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   final Plan? selectedPlan;
@@ -102,6 +103,30 @@ class _OrdersScreenState extends State<OrdersScreen> {
         return l10n?.resetPrice ?? '重置流量';
       default:
         return value;
+    }
+  }
+
+  int? _selectedPeriodPrice(Plan? plan) {
+    if (plan == null) return null;
+    switch (_period) {
+      case 'month_price':
+        return plan.monthPrice;
+      case 'quarter_price':
+        return plan.quarterPrice;
+      case 'half_year_price':
+        return plan.halfYearPrice;
+      case 'year_price':
+        return plan.yearPrice;
+      case 'two_year_price':
+        return plan.twoYearPrice;
+      case 'three_year_price':
+        return plan.threeYearPrice;
+      case 'onetime_price':
+        return plan.onetimePrice;
+      case 'reset_price':
+        return plan.resetPrice;
+      default:
+        return null;
     }
   }
 
@@ -629,6 +654,52 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 'Subscription Period'),
                       ),
                       const SizedBox(height: 12),
+                      if (widget.selectedPlan != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: context.appPalette.surfaceAlt,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: context.appPalette.border,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '当前套餐价格',
+                                style: TextStyle(
+                                  color: context.appPalette.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                _selectedPeriodPrice(widget.selectedPlan) ==
+                                        null
+                                    ? '暂无价格'
+                                    : '¥${Formatters.formatCurrency(_selectedPeriodPrice(widget.selectedPlan)!)}',
+                                style: TextStyle(
+                                  color: context.appPalette.accent,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '以上为所选周期的套餐标价，优惠券、余额抵扣及最终应付金额以服务器订单详情为准。',
+                                style: TextStyle(
+                                  color: context.appPalette.textSecondary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       TextField(
                         controller: _couponController,
                         decoration: InputDecoration(
@@ -727,6 +798,20 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const MyOrdersScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.receipt_long_rounded, size: 17),
+                      label: const Text('点我查看我的订单'),
+                    ),
+                  ),
                 ],
                 if (methods.isNotEmpty) ...[
                   const SizedBox(height: 18),
@@ -763,13 +848,42 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                 ] else ...[
                   const SizedBox(height: 18),
-                  Center(
-                    child: Text(
-                      AppLocalizations.of(context)?.noPaymentMethods ??
-                          'No payment methods available',
-                      style: TextStyle(
-                          color: context.appPalette.textSecondary,
-                          fontSize: 13),
+                  AnimatedCard(
+                    padding: const EdgeInsets.all(16),
+                    enableBreathing: false,
+                    useSolidBackground: true,
+                    shadowIntensity: 0.2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              color: context.appPalette.accent,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '暂时没有可用的支付方式',
+                                style: TextStyle(
+                                  color: context.appPalette.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '你可以先点击“创建订单（暂不支付）”，订单创建成功后再联系客服协助支付。',
+                          style: TextStyle(
+                            color: context.appPalette.textSecondary,
+                            fontSize: 12,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
