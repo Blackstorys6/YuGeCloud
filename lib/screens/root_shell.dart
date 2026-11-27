@@ -537,6 +537,7 @@ class _RootShellState extends State<RootShell> with WindowListener {
       case 2: // Account
         return AccountScreen(
           onLogout: widget.onLogout,
+          onRenew: () => _switchTab(1),
           connectionStatus: _statusMessage,
           connectionState: _status.name,
           reloadToken: _accountReload,

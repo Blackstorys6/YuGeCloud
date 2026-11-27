@@ -27,9 +27,11 @@ class AccountScreen extends StatefulWidget {
   final String connectionStatus;
   final String connectionState;
   final int reloadToken;
+  final VoidCallback onRenew;
   const AccountScreen({
     super.key,
     required this.onLogout,
+    required this.onRenew,
     required this.connectionStatus,
     required this.connectionState,
     this.reloadToken = 0,
@@ -263,115 +265,130 @@ class _AccountScreenState extends State<AccountScreen> {
             SizedBox(height: 12),
             AnimatedCard(
               shadowIntensity: 0.35,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: palette.accent.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
+              padding: EdgeInsets.zero,
+              useSolidBackground: true,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF55514F), Color(0xFF343438)],
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                subInfo['plan'] != null
+                                    ? (subInfo['plan']['name'] ??
+                                        (AppLocalizations.of(context)?.unknownPlan ?? 'Unknown Plan'))
+                                    : (AppLocalizations.of(context)?.noSubscription ?? 'No Subscription'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (subInfo['expired_at'] != null)
+                                Text(
+                                  '${AppLocalizations.of(context)?.expireDate ?? "Expires"}: ${Formatters.formatEpoch(subInfo['expired_at'])}',
+                                  style: const TextStyle(
+                                    color: Color(0xFFCAC7C5),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                        child: Icon(
-                          Icons.star,
-                          color: palette.accent,
-                          size: 20,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            subInfo['plan'] != null
-                                ? (subInfo['plan']['name'] ??
-                                    (AppLocalizations.of(
-                                          context,
-                                        )?.unknownPlan ??
-                                        'Unknown Plan'))
-                                : (AppLocalizations.of(
-                                      context,
-                                    )?.noSubscription ??
-                                    'No Subscription'),
+                        const SizedBox(width: 12),
+                        FilledButton(
+                          onPressed: widget.onRenew,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF343438),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 22,
+                              vertical: 11,
+                            ),
+                            shape: const StadiumBorder(),
+                          ),
+                          child: const Text(
+                            '续订',
                             style: TextStyle(
-                              color: palette.textPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          if (subInfo['expired_at'] != null)
-                            Text(
-                              '${AppLocalizations.of(context)?.expireDate ?? "Expires"}: ${Formatters.formatEpoch(subInfo['expired_at'])}',
-                              style: TextStyle(
-                                color: palette.textSecondary,
-                                fontSize: 12,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+                    Text(
+                      '${Formatters.formatBytes(used)} / ${Formatters.formatBytes(total)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: LinearProgressIndicator(
+                        value: percent,
+                        minHeight: 9,
+                        backgroundColor: Colors.white.withValues(alpha: 0.18),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF00B88A),
+                        ),
+                      ),
+                    ),
+                    if (subInfo['reset_day'] != null) ...[
+                      const SizedBox(height: 18),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 13,
+                          vertical: 11,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.09),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.refresh_rounded,
+                              size: 17,
+                              color: Color(0xFFFFC36A),
+                            ),
+                            const SizedBox(width: 9),
+                            Expanded(
+                              child: Text(
+                                '${AppLocalizations.of(context)?.trafficResetInfo ?? "Traffic resets on"} ${subInfo['reset_day']}',
+                                style: const TextStyle(
+                                  color: Color(0xFFE0DEDC),
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20),
-                  // Progress Bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: percent,
-                      backgroundColor: palette.surfaceAlt,
-                      valueColor: AlwaysStoppedAnimation(palette.accent),
-                      minHeight: 8,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${AppLocalizations.of(context)?.usedTraffic ?? "Used"}: ${Formatters.formatBytes(used)}',
-                        style: TextStyle(
-                          color: palette.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        '${AppLocalizations.of(context)?.totalTraffic ?? "Total"}: ${Formatters.formatBytes(total)}',
-                        style: TextStyle(
-                          color: palette.textSecondary,
-                          fontSize: 12,
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                  SizedBox(height: 16),
-                  if (subInfo['reset_day'] != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: palette.surfaceAlt,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.refresh,
-                            size: 16,
-                            color: palette.warning,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            '${AppLocalizations.of(context)?.trafficResetInfo ?? "Traffic resets on"} ${subInfo['reset_day']}',
-                            style: TextStyle(
-                              color: palette.textSecondary,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
 
