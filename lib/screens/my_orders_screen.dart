@@ -2,13 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/payment_method.dart';
+import '../models/plan.dart';
 import '../services/v2board_api.dart';
+import '../services/user_data_service.dart';
 import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
 import '../widgets/flux_loader.dart';
 
 class MyOrdersScreen extends StatefulWidget {
-  const MyOrdersScreen({super.key});
+  final bool historyOnly;
+  final ValueChanged<Plan>? onSelectPlan;
+
+  const MyOrdersScreen({
+    super.key,
+    this.historyOnly = false,
+    this.onSelectPlan,
+  });
 
   @override
   State<MyOrdersScreen> createState() => _MyOrdersScreenState();
@@ -20,6 +29,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _orders = [];
+  Set<int>? _availablePlanIds;
 
   int _number(dynamic value) {
     if (value is int) return value;
@@ -92,9 +102,31 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           .map((item) => Map<String, dynamic>.from(item))
           .toList();
 
+      Set<int>? availablePlanIds;
+      if (widget.historyOnly) {
+        try {
+          final planResponse = await _api.getPlans();
+          final planData = planResponse['data'];
+          if (planData is List) {
+            availablePlanIds = planData
+                .whereType<Map>()
+                .map((item) => _number(item['id']))
+                .where((id) => id > 0)
+                .toSet();
+          } else {
+            throw Exception('套餐列表格式异常');
+          }
+        } catch (_) {
+          availablePlanIds = null;
+        }
+      }
+
       if (mounted) {
         setState(() {
           _orders = orders;
+          if (widget.historyOnly) {
+            _availablePlanIds = availablePlanIds;
+          }
           _loading = false;
         });
       }
@@ -433,6 +465,116 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     );
   }
 
+  List<Plan> get _historyPlans {
+    final result = <Plan>[];
+    final seen = <int>{};
+
+    for (final order in _orders) {
+      if (_number(order['status']) != 3) continue;
+      if (_number(order['type']) == 4) continue;
+
+      final rawPlan = order['plan'];
+      if (rawPlan is! Map) continue;
+
+      try {
+        final json = Map<String, dynamic>.from(rawPlan);
+        final id = _number(json['id']);
+        if (id <= 0 || !seen.add(id)) continue;
+        result.add(Plan.fromJson(json));
+      } catch (_) {
+        continue;
+      }
+    }
+    return result;
+  }
+
+  Widget _buildHistoryPlanCard(BuildContext context, Plan plan) {
+    final palette = context.appPalette;
+    final trafficGb =
+        (plan.transferEnable / (1024 * 1024 * 1024)).toStringAsFixed(0);
+
+    return Card(
+      color: palette.surface,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: palette.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              plan.name,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '套餐流量：$trafficGb GB',
+              style: TextStyle(color: palette.textSecondary),
+            ),
+            if (plan.content?.isNotEmpty == true) ...[
+              const SizedBox(height: 6),
+              Text(
+                plan.content!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: palette.textSecondary, fontSize: 12),
+              ),
+            ],
+            if (widget.onSelectPlan != null) ...[
+              const SizedBox(height: 12),
+              if (_availablePlanIds == null)
+                Text(
+                  '暂时无法确认此套餐是否在售，请刷新后重试',
+                  style: TextStyle(color: palette.textSecondary),
+                )
+              else if (_availablePlanIds!.contains(plan.id))
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => widget.onSelectPlan!(plan),
+                    child: const Text('重新选择此套餐'),
+                  ),
+                )
+              else
+                Text(
+                  '当前不可购买（套餐可能已停售）',
+                  style: TextStyle(color: palette.textSecondary),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistorySection(BuildContext context) {
+    final plans = _historyPlans;
+    if (!widget.historyOnly || plans.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            '曾经购买的套餐',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: context.appPalette.textPrimary,
+            ),
+          ),
+        ),
+        ...plans.map((plan) => _buildHistoryPlanCard(context, plan)),
+      ],
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -444,7 +586,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     final palette = context.appPalette;
     return Scaffold(
       appBar: AppBar(
-        title: Text('我的订单'),
+        title: Text(widget.historyOnly ? '历史套餐' : '我的订单'),
         actions: [
           IconButton(
             tooltip: '刷新',
@@ -477,17 +619,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       ),
                     ),
                   )
-                : _orders.isEmpty
-                    ? const Center(child: Text('暂无订单记录'))
-                    : RefreshIndicator(
-                        onRefresh: _loadOrders,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _orders.length,
-                          itemBuilder: (context, index) =>
-                              _buildOrderCard(context, _orders[index]),
-                        ),
-                      ),
+                : widget.historyOnly && _historyPlans.isEmpty
+                    ? const Center(child: Text('暂无已完成的历史套餐'))
+                    : !widget.historyOnly && _orders.isEmpty
+                        ? const Center(child: Text('暂无订单记录'))
+                        : RefreshIndicator(
+                            onRefresh: _loadOrders,
+                            child: ListView(
+                              padding: const EdgeInsets.all(16),
+                              children: widget.historyOnly
+                                  ? [_buildHistorySection(context)]
+                                  : _orders
+                                      .map((order) =>
+                                          _buildOrderCard(context, order))
+                                      .toList(),
+                            ),
+                          ),
       ),
     );
   }

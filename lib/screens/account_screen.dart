@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import '../models/user_info.dart';
+import '../models/plan.dart';
 import '../services/user_data_service.dart';
 import '../services/v2board_api.dart'; // For V2BoardApiException
 import '../services/api_config.dart';
@@ -29,11 +30,13 @@ class AccountScreen extends StatefulWidget {
   final int reloadToken;
   final VoidCallback onRenew;
   final VoidCallback onSwitchPlan;
+  final ValueChanged<Plan>? onSelectHistoricalPlan;
   const AccountScreen({
     super.key,
     required this.onLogout,
     required this.onRenew,
     required this.onSwitchPlan,
+    this.onSelectHistoricalPlan,
     required this.connectionStatus,
     required this.connectionState,
     this.reloadToken = 0,
@@ -489,6 +492,21 @@ class _AccountScreenState extends State<AccountScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => const MyOrdersScreen(),
+                    ),
+                  ),
+                ),
+                Divider(height: 24, color: palette.border),
+                _buildLinkRow(
+                  context,
+                  Icons.history_rounded,
+                  '历史套餐',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MyOrdersScreen(
+                        historyOnly: true,
+                        onSelectPlan: widget.onSelectHistoricalPlan,
+                      ),
                     ),
                   ),
                 ),
