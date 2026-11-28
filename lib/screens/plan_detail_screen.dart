@@ -3,7 +3,6 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../models/plan.dart';
 import '../theme/app_colors.dart';
 import '../utils/formatters.dart';
-import 'orders_screen.dart';
 
 /// 套餐详情页：Markdown 介绍 + 各周期价格 + 立即购买
 class PlanDetailScreen extends StatelessWidget {
@@ -194,15 +193,8 @@ class PlanDetailScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 58,
                 child: FilledButton(
-                  onPressed: () async {
-                    final result = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (_) => OrdersScreen(selectedPlan: plan),
-                      ),
-                    );
-                    if (result == true && context.mounted) {
-                      Navigator.of(context).pop(true);
-                    }
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: palette.accent,
