@@ -29,7 +29,8 @@ String? _plainSummary(String? md) {
 class PlansScreen extends StatefulWidget {
   final void Function(Plan plan)? onChoose;
   final VoidCallback? onRedeemed;
-  const PlansScreen({super.key, this.onChoose, this.onRedeemed});
+  final int reloadToken;
+  const PlansScreen({super.key, this.onChoose, this.onRedeemed, this.reloadToken = 0});
 
   @override
   State<PlansScreen> createState() => _PlansScreenState();
@@ -38,6 +39,7 @@ class PlansScreen extends StatefulWidget {
 class _PlansScreenState extends State<PlansScreen> {
   final _userDataService = UserDataService();
   late Future<List<Plan>> _plansFuture;
+  int _currentPlanId = 0;
 
   @override
   void initState() {
@@ -45,9 +47,23 @@ class _PlansScreenState extends State<PlansScreen> {
     _plansFuture = _loadPlans();
   }
 
+  @override
+  void didUpdateWidget(covariant PlansScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.reloadToken != widget.reloadToken) {
+      setState(() {
+        _plansFuture = _loadPlans(forceRefresh: true);
+      });
+    }
+  }
+
   Future<List<Plan>> _loadPlans({bool forceRefresh = false}) async {
     // 使用缓存服务，避免重复请求
     final data = await _userDataService.getPlans(forceRefresh: forceRefresh);
+    final subscribe = await _userDataService.getSubscribeInfo(
+      forceRefresh: forceRefresh,
+    );
+    _currentPlanId = (subscribe['plan_id'] as num?)?.toInt() ?? 0;
     return data.map((item) => Plan.fromJson(item)).toList();
   }
 
@@ -112,6 +128,7 @@ class _PlansScreenState extends State<PlansScreen> {
             const SizedBox(height: 16),
             ...plans.asMap().entries.map((entry) {
               final plan = entry.value;
+              final isCurrentPlan = plan.id == _currentPlanId;
               final price = (plan.monthPrice ?? 0) > 0
                   ? plan.monthPrice!
                   : (plan.yearPrice ?? 0) > 0
@@ -127,7 +144,7 @@ class _PlansScreenState extends State<PlansScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: AnimatedCard(
-                  onTap: widget.onChoose == null
+                  onTap: widget.onChoose == null || isCurrentPlan
                       ? null
                       : () async {
                           final result = await Navigator.of(context).push(
@@ -275,37 +292,60 @@ class _PlansScreenState extends State<PlansScreen> {
                               ),
                             ),
                             const Spacer(),
-                            // 按钮
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: palette.accent,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    AppLocalizations.of(context)?.subscribe ??
-                                        'Subscribe',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
+                            // 当前套餐状态或订阅按钮
+                            if (isCurrentPlan)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: palette.accent.withOpacity(0.14),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: palette.accent.withOpacity(0.35),
+                                  ),
+                                ),
+                                child: Text(
+                                  '当前套餐',
+                                  style: TextStyle(
+                                    color: palette.accent,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: palette.accent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      AppLocalizations.of(context)?.subscribe ??
+                                          'Subscribe',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
                                     ),
-                                  ),
-                                  SizedBox(width: 2),
-                                  Icon(
-                                    Icons.arrow_forward_rounded,
-                                    color: Colors.white,
-                                    size: 14,
-                                  ),
-                                ],
+                                    const SizedBox(width: 2),
+                                    const Icon(
+                                      Icons.arrow_forward_rounded,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ],

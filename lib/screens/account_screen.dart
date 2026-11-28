@@ -28,10 +28,12 @@ class AccountScreen extends StatefulWidget {
   final String connectionState;
   final int reloadToken;
   final VoidCallback onRenew;
+  final VoidCallback onSwitchPlan;
   const AccountScreen({
     super.key,
     required this.onLogout,
     required this.onRenew,
+    required this.onSwitchPlan,
     required this.connectionStatus,
     required this.connectionState,
     this.reloadToken = 0,
@@ -320,24 +322,51 @@ class _AccountScreenState extends State<AccountScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        FilledButton(
-                          onPressed: widget.onRenew,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF343438),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 22,
-                              vertical: 11,
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FilledButton(
+                              onPressed: widget.onRenew,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF343438),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 22,
+                                  vertical: 11,
+                                ),
+                                shape: const StadiumBorder(),
+                              ),
+                              child: const Text(
+                                '续订',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                            shape: const StadiumBorder(),
-                          ),
-                          child: const Text(
-                            '续订',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                            const SizedBox(height: 8),
+                            OutlinedButton(
+                              onPressed: widget.onSwitchPlan,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.65),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                shape: const StadiumBorder(),
+                              ),
+                              child: const Text(
+                                '切换套餐',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),

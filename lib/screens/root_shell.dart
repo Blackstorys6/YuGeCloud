@@ -533,11 +533,13 @@ class _RootShellState extends State<RootShell> with WindowListener {
         return PlansScreen(
           onChoose: _openCheckout,
           onRedeemed: () => setState(() => _accountReload++),
+          reloadToken: _accountReload,
         );
       case 2: // Account
         return AccountScreen(
           onLogout: widget.onLogout,
           onRenew: () => _switchTab(1),
+          onSwitchPlan: () => _switchTab(1),
           connectionStatus: _statusMessage,
           connectionState: _status.name,
           reloadToken: _accountReload,
